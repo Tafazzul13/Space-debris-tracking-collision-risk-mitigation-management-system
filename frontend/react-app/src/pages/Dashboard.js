@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { objectsApi, riskApi } from '../services/api';
+import { objectsApi, riskApi, ingestApi } from '../services/api';
 import { usePolling } from '../hooks/usePolling';
 import { useRealtime } from '../context/RealtimeContext';
 
@@ -39,6 +39,8 @@ export default function Dashboard() {
   const { liveAlerts } = useRealtime();
   const [scanning, setScanning] = useState(false);
   const [systemStatus, setSystemStatus] = useState({ api: 'online', db: 'online', engine: 'online' });
+  const [scanError, setScanError] = useState(null);
+  const [seeding, setSeeding] = useState(false);
 
   const { data: objData, loading: objLoading } = usePolling(
     () => objectsApi.list().then(r => r.data || []),
@@ -76,13 +78,28 @@ export default function Dashboard() {
 
   const handleScan = async () => {
     setScanning(true);
+    setScanError(null);
     try {
       await riskApi.scan();
       await refresh();
     } catch (e) {
+      setScanError(e.message || 'Conjunction scan failed - check server connection');
       console.error('Scan error:', e);
     } finally {
       setScanning(false);
+    }
+  };
+
+  const handleSeedDebris = async () => {
+    setSeeding(true);
+    try {
+      await ingestApi.tle('active');
+      await refresh();
+    } catch (e) {
+      setScanError('Seed debris failed: ' + (e.message || 'Check server connection'));
+      console.error('Seed error:', e);
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -118,8 +135,46 @@ export default function Dashboard() {
           >
             {scanning ? <><div className="refresh-spinner" /> Running SGP4 Scan...</> : '⚡ Run Conjunction Scan'}
           </button>
+          {scanError && (
+            <button
+              onClick={() => setScanError(null)}
+              className="btn-secondary"
+              style={{ padding: '0.55rem 1.15rem', fontSize: '0.8125rem', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}
+            >
+              ✕ Dismiss Error
+            </button>
+          )}
+          <button
+            onClick={handleSeedDebris}
+            disabled={seeding}
+            className="btn-secondary"
+            style={{ padding: '0.55rem 1.15rem', fontSize: '0.8125rem', borderColor: 'rgba(6,182,212,0.4)', color: '#22d3ee' }}
+          >
+            {seeding ? 'Seeding Debris...' : '🛰️ Seed Debris Data'}
+          </button>
         </div>
       </div>
+
+      {/* Scan Error Toast */}
+      {scanError && (
+        <div style={{
+          background: 'rgba(239,68,68,0.15)',
+          border: '1px solid rgba(239,68,68,0.4)',
+          borderLeft: '4px solid #ef4444',
+          color: '#f87171',
+          padding: '0.875rem 1rem',
+          borderRadius: '10px',
+          marginBottom: '1rem',
+          fontSize: '0.8125rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.625rem',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+          <span style={{ flex: 1 }}>{scanError}</span>
+        </div>
+      )}
 
       {/* Primary KPI Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem', marginBottom: '1.25rem' }}>
