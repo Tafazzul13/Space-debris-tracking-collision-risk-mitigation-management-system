@@ -4,6 +4,9 @@ import { usePolling } from '../hooks/usePolling';
 
 export default function GlobeView() {
   const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const drawRef = useRef(null);
+
   const { data: objects = [], loading, lastUpdated, refresh } = usePolling(
     () => objectsApi.list().then(r => r.data || []),
     12000
@@ -11,14 +14,40 @@ export default function GlobeView() {
 
   const [selected, setSelected] = useState(null);
   const rotRef = useRef(0);
-  const animRef = useRef(null);
+
+  // Keep latest draw in a ref so animation loop always uses current version
+  const setDraw = useCallback((fn) => {
+    drawRef.current = fn;
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      animRef.current = requestAnimationFrame(drawRef.current || draw);
+      return;
+    }
+
     const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    if (!W || !H) return;
+    if (!ctx) return;
+
+    // Ensure bitmap matches display size
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const displayW = rect.width || canvas.clientWidth || 600;
+    const displayH = rect.height || canvas.clientHeight || 400;
+
+    if (canvas.width !== displayW * dpr || canvas.height !== displayH * dpr) {
+      canvas.width = displayW * dpr;
+      canvas.height = displayH * dpr;
+      ctx.scale(dpr, dpr);
+    }
+
+    const W = canvas.width / dpr;
+    const H = canvas.height / dpr;
+    if (!W || !H) {
+      animRef.current = requestAnimationFrame(drawRef.current || draw);
+      return;
+    }
 
     const cx = W / 2, cy = H / 2;
     const R = Math.min(W, H) * 0.35;
@@ -29,9 +58,9 @@ export default function GlobeView() {
     ctx.fillStyle = '#020617';
     ctx.fillRect(0, 0, W, H);
 
-    // Stars field
+    // Stars field (deterministic pseudo-random)
     ctx.save();
-    for (let i = 0; i < 220; i++) {
+    for (let i = 0; i < 180; i++) {
       const sx = ((i * 2654435761 + 0xdeadbeef) % W + W) % W;
       const sy = ((i * 1013904223 + 0xc0ffee) % H + H) % H;
       const sa = 0.15 + (i % 7) * 0.12;
@@ -44,7 +73,7 @@ export default function GlobeView() {
     }
     ctx.restore();
 
-    // Earth atmosphere outer halo
+    // Earth atmosphere halo
     const atmo = ctx.createRadialGradient(cx, cy, R * 0.88, cx, cy, R * 1.35);
     atmo.addColorStop(0, 'rgba(6,182,212,0.18)');
     atmo.addColorStop(0.4, 'rgba(6,182,212,0.06)');
@@ -64,7 +93,7 @@ export default function GlobeView() {
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.fill();
 
-    // Longitude and Latitude grid wireframe
+    // Latitude grid
     ctx.save();
     ctx.strokeStyle = 'rgba(6,182,212,0.12)';
     ctx.lineWidth = 0.75;
@@ -77,6 +106,7 @@ export default function GlobeView() {
         ctx.stroke();
       }
     }
+    // Longitude grid
     for (let lon = 0; lon < 360; lon += 30) {
       const angle = (lon * Math.PI) / 180 + rot;
       ctx.beginPath();
@@ -86,7 +116,7 @@ export default function GlobeView() {
     }
     ctx.restore();
 
-    // Earth rim neon ring
+    // Earth rim
     ctx.save();
     ctx.strokeStyle = 'rgba(6,182,212,0.4)';
     ctx.lineWidth = 1.25;
@@ -97,17 +127,23 @@ export default function GlobeView() {
     ctx.stroke();
     ctx.restore();
 
-    // Orbit paths and tracked space objects
-    objects.forEach((obj) => {
-      const lonRad = (((obj.lon_deg || obj.lonDeg || obj.id * 37) * Math.PI) / 180) + rot;
-      const latRad = ((obj.lat_deg || obj.latDeg || 0) * Math.PI) / 180;
-      const alt = obj.alt_km || obj.altKm || 450;
+    // Objects
+    const now = Date.now();
+    const safeObjects = Array.isArray(objects) ? objects : [];
+    safeObjects.forEach((obj) => {
+      const lon_deg = obj.lon_deg ?? obj.lonDeg ?? (obj.id * 37) % 360;
+      const lat_deg = obj.lat_deg ?? obj.latDeg ?? 0;
+      const alt = obj.alt_km ?? obj.altKm ?? 450;
+      const objectType = obj.object_type ?? obj.objectType ?? 'DEBRIS';
+
+      const lonRad = ((lon_deg * Math.PI) / 180) + rot;
+      const latRad = ((lat_deg * Math.PI) / 180);
       const orbitR = R * (1 + alt / 7000);
 
-      // Orbital trace line
+      // Orbit trace line
       ctx.save();
       ctx.globalAlpha = 0.08;
-      ctx.strokeStyle = obj.object_type === 'SATELLITE' ? '#06b6d4' : '#8b5cf6';
+      ctx.strokeStyle = objectType === 'SATELLITE' ? '#06b6d4' : '#8b5cf6';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.ellipse(cx, cy, orbitR, orbitR * Math.abs(Math.cos(latRad)) * 0.35 + 4, 0, 0, Math.PI * 2);
@@ -117,14 +153,14 @@ export default function GlobeView() {
       const px = cx + Math.cos(lonRad) * orbitR * 0.58;
       const py = cy + Math.sin(lonRad) * orbitR * 0.24 + Math.sin(latRad) * R * 0.35;
 
-      // Filter back-side objects to enhance 3D depth
+      // Back-side cull
       if (Math.cos(lonRad) < -0.45) return;
 
       const isSelected = selected?.id === obj.id;
-      const dotColor = obj.object_type === 'SATELLITE' ? '#06b6d4' :
-                       obj.object_type === 'DEBRIS' ? '#f43f5e' : '#eab308';
+      const dotColor = objectType === 'SATELLITE' ? '#06b6d4' :
+                       objectType === 'DEBRIS' ? '#f43f5e' : '#eab308';
 
-      // Object glow
+      // Object glow + dot
       ctx.save();
       ctx.shadowBlur = isSelected ? 22 : 9;
       ctx.shadowColor = dotColor;
@@ -134,7 +170,7 @@ export default function GlobeView() {
       ctx.fill();
       ctx.restore();
 
-      // Object orbit halo
+      // Object halo
       ctx.save();
       ctx.strokeStyle = dotColor;
       ctx.globalAlpha = isSelected ? 0.9 : 0.45;
@@ -144,11 +180,11 @@ export default function GlobeView() {
       ctx.stroke();
       ctx.restore();
 
-      // Object target label
+      // Selected label
       if (isSelected) {
         ctx.save();
         ctx.fillStyle = 'rgba(2,6,23,0.92)';
-        const label = `${obj.name || `OBJ #${obj.id}`} (${(alt).toFixed(0)}km)`;
+        const label = `${obj.name || `OBJ #${obj.id}`} (${alt.toFixed(0)}km)`;
         ctx.font = '600 11px Inter, sans-serif';
         const tw = ctx.measureText(label).width;
         ctx.fillRect(px - tw / 2 - 8, py - 30, tw + 16, 20);
@@ -162,7 +198,7 @@ export default function GlobeView() {
       }
     });
 
-    // Optical crosshairs
+    // Crosshairs
     ctx.save();
     ctx.strokeStyle = 'rgba(6,182,212,0.18)';
     ctx.lineWidth = 1;
@@ -175,42 +211,52 @@ export default function GlobeView() {
     ctx.stroke();
     ctx.restore();
 
-    animRef.current = requestAnimationFrame(draw);
+    animRef.current = requestAnimationFrame(drawRef.current || draw);
   }, [objects, selected]);
+
+  // Update the draw ref whenever draw changes
+  useEffect(() => {
+    drawRef.current = draw;
+  }, [draw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const resize = () => {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      // Just trigger a redraw; draw() reads getBoundingClientRect each frame
     };
-    resize();
+
     window.addEventListener('resize', resize);
+
+    // Start animation loop
     animRef.current = requestAnimationFrame(draw);
 
     return () => {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [draw]);
+  }, []); // Run once — draw ref handles updates internally
 
   const handleCanvasClick = useCallback((e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    const W = canvas.width, H = canvas.height;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const W = rect.width || canvas.clientWidth || 600;
+    const H = rect.height || canvas.clientHeight || 400;
     const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.35;
     let hit = null, minD = 18;
 
-    objects.forEach(obj => {
-      const lonRad = (((obj.lon_deg || obj.lonDeg || obj.id * 37) * Math.PI) / 180) + rotRef.current;
-      const latRad = ((obj.lat_deg || obj.latDeg || 0) * Math.PI) / 180;
-      const alt = obj.alt_km || obj.altKm || 450;
+    const safeObjects = Array.isArray(objects) ? objects : [];
+    safeObjects.forEach((obj) => {
+      const lon_deg = obj.lon_deg ?? obj.lonDeg ?? (obj.id * 37) % 360;
+      const lat_deg = obj.lat_deg ?? obj.latDeg ?? 0;
+      const alt = obj.alt_km ?? obj.altKm ?? 450;
       const orbitR = R * (1 + alt / 7000);
+      const lonRad = ((lon_deg * Math.PI) / 180) + rotRef.current;
+      const latRad = ((lat_deg * Math.PI) / 180);
       const px = cx + Math.cos(lonRad) * orbitR * 0.58;
       const py = cy + Math.sin(lonRad) * orbitR * 0.24 + Math.sin(latRad) * R * 0.35;
       const d = Math.hypot(mx - px, my - py);
@@ -222,7 +268,9 @@ export default function GlobeView() {
     setSelected(hit);
   }, [objects]);
 
-  const leoCount = objects.filter(o => (o.alt_km || o.altKm || 450) < 2000).length;
+  const leoCount = Array.isArray(objects)
+    ? objects.filter(o => (o.alt_km ?? o.altKm ?? 450) < 2000).length
+    : 0;
   const [utc, setUtc] = useState(new Date().toISOString().slice(11, 19));
   useEffect(() => {
     const t = setInterval(() => setUtc(new Date().toISOString().slice(11, 19)), 1000);
@@ -240,7 +288,6 @@ export default function GlobeView() {
             Real-time orbital propagation view • Click any entity to inspect telemetry
           </p>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className="live-badge"><span className="live-dot" />SGP4 PROPAGATOR ACTIVE</div>
           <button onClick={refresh} className="btn-secondary btn-sm" disabled={loading}>
@@ -254,14 +301,14 @@ export default function GlobeView() {
         <div style={{ position: 'relative', width: '100%', minHeight: '520px', height: '62vh' }}>
           <canvas
             ref={canvasRef}
-            style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }}
+            style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair', background: '#020617' }}
             onClick={handleCanvasClick}
           />
 
           {/* Tactical HUD Overlay */}
           <div className="globe-hud">
             <div className="globe-hud-item"><div className="globe-hud-label">EPOCH UTC</div>{utc}</div>
-            <div className="globe-hud-item"><div className="globe-hud-label">TRACKED CONSTELLATION</div>{objects.length} OBJECTS</div>
+            <div className="globe-hud-item"><div className="globe-hud-label">TRACKED CONSTELLATION</div>{Array.isArray(objects) ? objects.length : 0} OBJECTS</div>
             <div className="globe-hud-item"><div className="globe-hud-label">LEO REGIME (&lt;2000KM)</div>{leoCount} ASSETS</div>
           </div>
 
@@ -279,7 +326,7 @@ export default function GlobeView() {
             ))}
           </div>
 
-          {/* Selected Object Telemetry Modal Card */}
+          {/* Selected Object Telemetry */}
           {selected && (
             <div style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(2,6,23,0.92)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 12, padding: '1rem', minWidth: 220, backdropFilter: 'blur(16px)', boxShadow: '0 15px 30px rgba(0,0,0,0.6)' }}>
               <div style={{ fontSize: '0.625rem', color: '#06b6d4', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.35rem' }}>
@@ -289,9 +336,9 @@ export default function GlobeView() {
                 {selected.name || `Object #${selected.id}`}
               </div>
               {[
-                ['NORAD ID', selected.norad_id || selected.noradId || '—'],
-                ['Type', selected.object_type || selected.objectType || 'DEBRIS'],
-                ['Altitude', `${(selected.alt_km || selected.altKm || 450).toFixed(1)} km`],
+                ['NORAD ID', selected.norad_id ?? selected.noradId ?? '—'],
+                ['Type', selected.object_type ?? selected.objectType ?? 'DEBRIS'],
+                ['Altitude', `${(selected.alt_km ?? selected.altKm ?? 450).toFixed(1)} km`],
                 ['Radar CS', selected.rcs_m2 ? `${selected.rcs_m2} m²` : '1.0 m²'],
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4 }}>
@@ -310,12 +357,12 @@ export default function GlobeView() {
         </div>
       </div>
 
-      {/* Orbit Overview KPIs */}
+      {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
         {[
-          { label: 'Active Catalog', value: objects.length, color: '#06b6d4', note: 'Cataloged in database' },
+          { label: 'Active Catalog', value: Array.isArray(objects) ? objects.length : 0, color: '#06b6d4', note: 'Cataloged in database' },
           { label: 'Low Earth Orbit (LEO)', value: leoCount, color: '#8b5cf6', note: '&lt; 2000 km altitude' },
-          { label: 'Screened Orbits', value: Math.max(1, Math.floor(objects.length / 2)), color: '#22c55e', note: 'Continuous propagation' },
+          { label: 'Screened Orbits', value: Math.max(1, Math.floor((Array.isArray(objects) ? objects.length : 0) / 2)), color: '#22c55e', note: 'Continuous propagation' },
           { label: 'Global Coverage', value: '100%', color: '#f59e0b', note: 'Full spherical field' },
         ].map(s => (
           <div key={s.label} className="glass" style={{ padding: '1rem 1.15rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
