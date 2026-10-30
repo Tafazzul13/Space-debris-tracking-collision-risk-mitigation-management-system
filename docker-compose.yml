@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: space-debris-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: space_debris_db
+      MYSQL_USER: spacedebris
+      MYSQL_PASSWORD: spacedebris123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d
+    networks:
+      - space-debris-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  java-risk-engine:
+    build:
+      context: ./backend/java-risk-engine
+      dockerfile: Dockerfile
+    container_name: java-risk-engine
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/space_debris_db?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: spacedebris
+      SPRING_DATASOURCE_PASSWORD: spacedebris123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: 'true'
+      SERVER_PORT: 8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - space-debris-net
+
+  node-api:
+    build:
+      context: ./backend/node-api
+      dockerfile: Dockerfile
+    container_name: node-api
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: spacedebris
+      DB_PASSWORD: spacedebris123
+      DB_NAME: space_debris_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JAVA_ENGINE_URL: http://java-risk-engine:8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+      java-risk-engine:
+        condition: service_started
+    networks:
+      - space-debris-net
+
+  frontend:
+    build:
+      context: ./frontend/react-app
+      dockerfile: Dockerfile
+    container_name: space-debris-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - node-api
+    networks:
+      - space-debris-net
+
+volumes:
+  mysql_data:
+
+networks:
+  space-debris-net:
+    driver: bridge
