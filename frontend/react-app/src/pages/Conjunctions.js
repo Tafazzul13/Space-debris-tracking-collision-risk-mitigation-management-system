@@ -1,147 +1,179 @@
 import { useState, useEffect } from 'react';
 import { objectsApi } from '../services/api';
+import { usePolling } from '../hooks/usePolling';
+import { useRealtime } from '../context/RealtimeContext';
 
-const RISK_CONFIG = {
-  CRITICAL: { color: '#ef4444', badge: 'badge-critical' },
-  HIGH: { color: '#f97316', badge: 'badge-high' },
-  MEDIUM: { color: '#eab308', badge: 'badge-medium' },
-  LOW: { color: '#22c55e', badge: 'badge-low' },
+const RISK_CFG = {
+  CRITICAL: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)' },
+  HIGH:     { color: '#f97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)' },
+  MEDIUM:   { color: '#eab308', bg: 'rgba(234,179,8,0.12)',  border: 'rgba(234,179,8,0.35)'  },
+  LOW:      { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.35)'  },
 };
 
 export default function Conjunctions() {
-  const [conjunctions, setConjunctions] = useState([]);
   const [filter, setFilter] = useState('ALL');
-  const [loading, setLoading] = useState(false);
+  const [acking, setAcking] = useState(new Set());
+  const { liveAlerts } = useRealtime();
+
+  const { data, loading, lastUpdated, refresh } = usePolling(
+    () => objectsApi.conjunctions().then(r => r.data || []),
+    15000
+  );
+
+  const conjunctions = data || [];
 
   useEffect(() => {
-    loadData();
-  }, [filter]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const res = await objectsApi.conjunctions(filter !== 'ALL' ? filter : undefined);
-      setConjunctions(res.data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const acknowledge = async (id) => {
-    try {
-      await objectsApi.acknowledge(id);
-      loadData();
-    } catch (e) { alert('Failed to acknowledge'); }
-  };
+    if (liveAlerts.length > 0) refresh();
+  }, [liveAlerts.length]); // eslint-disable-line
 
   const filtered = filter === 'ALL' ? conjunctions : conjunctions.filter(c => c.risk_level === filter);
+  const counts = { ALL: conjunctions.length, CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  conjunctions.forEach(c => {
+    if (counts[c.risk_level] !== undefined) counts[c.risk_level]++;
+  });
+
+  const acknowledge = async (id) => {
+    setAcking(prev => new Set([...prev, id]));
+    try {
+      await objectsApi.acknowledge(id);
+      await refresh();
+    } catch {
+      alert('Failed to acknowledge conjunction');
+    } finally {
+      setAcking(prev => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+    }
+  };
+
+  const ago = lastUpdated ? Math.floor((Date.now() - lastUpdated.getTime()) / 1000) : null;
 
   return (
     <div className="page-container animate-slide-in">
-      <div className="section-header mb-6">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 className="section-title">Conjunction Analysis</h1>
-          <p className="section-subtitle">Detected close approaches and collision risk events</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.02em' }}>
+            Conjunction Analysis
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '0.8125rem', marginTop: '0.25rem' }}>
+            Pairwise trajectory intersections screened within 50 km window • Auto-polling real-time
+          </p>
         </div>
-      </div>
-
-      <div className="glass p-4 rounded-xl mb-6 flex flex-wrap gap-2">
-        {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filter === f
-                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10'
-                : 'bg-white/5 text-slate-400 border border-border/50 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {f}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'JetBrains Mono' }}>
+            {loading ? '↺ Synchronizing...' : ago !== null ? `Synced ${ago}s ago` : ''}
+          </span>
+          <button onClick={refresh} className="btn-secondary btn-sm" disabled={loading}>
+            {loading ? '...' : '↺ Force Refresh'}
           </button>
-        ))}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="glass p-12 rounded-xl text-center">
-          <div className="spinner mb-4" />
-          <p className="text-slate-400">Loading conjunction data...</p>
-        </div>
-      ) : conjunctions.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-green-400">
-            <span className="text-2xl">✓</span>
-          </div>
-          <h3 className="text-lg font-semibold text-white mb-2">All Clear</h3>
-          <p className="text-slate-400">No active conjunctions detected.</p>
-        </div>
-      ) : (
-        <div className="table-container">
-          <table>
-            <thead>
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(f => {
+          const cfg = RISK_CFG[f];
+          const active = filter === f;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: '0.4rem 0.875rem',
+                borderRadius: 999,
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                background: active ? (cfg?.bg || 'rgba(6,182,212,0.15)') : 'rgba(255,255,255,0.03)',
+                color: active ? (cfg?.color || '#06b6d4') : '#64748b',
+                border: `1px solid ${active ? (cfg?.border || 'rgba(6,182,212,0.3)') : 'rgba(255,255,255,0.07)'}`,
+                boxShadow: active ? `0 0 10px ${cfg?.color || '#06b6d4'}33` : 'none',
+              }}
+            >
+              {f} {counts[f] > 0 && <span style={{ opacity: 0.8, marginLeft: 4 }}>({counts[f]})</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main Table */}
+      <div className="table-container" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+        <table>
+          <thead>
+            <tr>
+              {['Event ID', 'Target Pair', 'Time of Closest Approach (TCA)', 'Miss Distance', 'Collision PoC', 'Risk Level', 'Mitigation Status', 'Action'].map(h => (
+                <th key={h}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(c => {
+              const cfg = RISK_CFG[c.risk_level] || RISK_CFG.LOW;
+              return (
+                <tr key={c.id}>
+                  <td>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: '#475569' }}>#{c.id}</span>
+                  </td>
+                  <td>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8125rem', color: '#06b6d4', fontWeight: 600 }}>Obj #{c.primary_object_id}</span>
+                    <span style={{ color: '#475569', margin: '0 8px' }}>↔</span>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8125rem', color: '#8b5cf6', fontWeight: 600 }}>Obj #{c.secondary_object_id}</span>
+                  </td>
+                  <td>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8125rem', color: '#e2e8f0' }}>
+                      {new Date(c.tca).toISOString().slice(0, 19).replace('T', ' ')} UTC
+                    </span>
+                  </td>
+                  <td style={{ fontFamily: 'JetBrains Mono', fontSize: '0.8125rem', color: '#38bdf8', fontWeight: 600 }}>
+                    {c.min_distance_km ? `${c.min_distance_km.toFixed(3)} km` : '—'}
+                  </td>
+                  <td>
+                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '0.75rem', color: '#94a3b8' }}>
+                      {c.poc ? c.poc.toExponential(3) : '—'}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 999, fontSize: '0.6875rem', fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: cfg.color }} />
+                      {c.risk_level}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: '0.75rem', color: c.is_acknowledged ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                      {c.is_acknowledged ? '✓ Cleared' : '● Unacknowledged'}
+                    </span>
+                  </td>
+                  <td>
+                    {!c.is_acknowledged ? (
+                      <button
+                        onClick={() => acknowledge(c.id)}
+                        disabled={acking.has(c.id)}
+                        className="btn-primary"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', borderRadius: 6 }}
+                      >
+                        {acking.has(c.id) ? 'Saving...' : 'Acknowledge'}
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: '#475569' }}>Resolved</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
               <tr>
-                <th className="w-10">#</th>
-                <th>Primary Object</th>
-                <th>Secondary Object</th>
-                <th className="w-64">Time of Closest Approach</th>
-                <th className="w-48">Min Distance</th>
-                <th className="w-40">Probability</th>
-                <th className="w-40">Risk Level</th>
-                <th className="w-48">Status</th>
-                <th className="w-48">Action</th>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: '#64748b', fontSize: '0.875rem' }}>
+                  {loading ? 'Refreshing conjunction matrix...' : '✓ No conjunction events matching selected filter.'}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => {
-                const cfg = RISK_CONFIG[c.risk_level] || RISK_CONFIG.LOW;
-                return (
-                  <tr key={c.id} className="border-b border-slate-800/40 hover:bg-white/3 transition-colors group">
-                    <td className="py-4 text-xs font-mono text-slate-500 font-medium">#{c.id}</td>
-                    <td className="py-4 text-sm text-slate-300">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                        Obj #{c.primary_object_id}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm text-slate-300">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-purple-400" />
-                        Obj #{c.secondary_object_id}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm text-slate-300 font-mono">{new Date(c.tca).toLocaleString()}</td>
-                    <td className="py-4 text-sm text-slate-300">{c.min_distance_km?.toFixed(3)} km</td>
-                    <td className="py-4 text-sm text-slate-300 font-mono">{c.poc?.toExponential(3)}</td>
-                    <td className="py-4">
-                      <span className={`badge ${cfg.badge}`}>{c.risk_level}</span>
-                    </td>
-                    <td className="py-4 text-sm">
-                      <span className={`px-3 py-1.5 rounded text-xs font-medium ${
-                        c.is_acknowledged
-                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}>
-                        {c.is_acknowledged ? 'Acknowledged' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm">
-                      {!c.is_acknowledged && (
-                        <button
-                          onClick={() => acknowledge(c.id)}
-                          className="w-full btn-primary text-xs py-2"
-                        >
-                          Acknowledge
-                        </button>
-                      )}
-                      {c.is_acknowledged && (
-                        <span className="text-xs text-green-400">Done</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

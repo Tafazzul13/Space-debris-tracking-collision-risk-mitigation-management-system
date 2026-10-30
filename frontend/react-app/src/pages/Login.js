@@ -14,9 +14,10 @@ export default function Login() {
     try {
       const res = await authApi.login(username, password);
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
       window.location.href = '/';
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Login failed - check credentials');
     } finally {
       setLoading(false);
     }
