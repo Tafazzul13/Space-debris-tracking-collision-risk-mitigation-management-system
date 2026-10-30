@@ -52,15 +52,15 @@ export default function Dashboard() {
     15000
   );
 
-  const objects = objData || [];
-  const conjunctions = conjData || [];
+  const objects = objData ? [...objData] : [];
+  const conjunctions = conjData ? [...conjData] : [];
 
   const stats = {
     total: objects.length,
-    critical: conjunctions.filter(c => c.risk_level === 'CRITICAL').length,
-    high:     conjunctions.filter(c => c.risk_level === 'HIGH').length,
-    medium:   conjunctions.filter(c => c.risk_level === 'MEDIUM').length,
-    low:      conjunctions.filter(c => c.risk_level === 'LOW').length,
+    critical: conjunctions?.filter(c => c.risk_level === 'CRITICAL').length || 0,
+    high:     conjunctions?.filter(c => c.risk_level === 'HIGH').length || 0,
+    medium:   conjunctions?.filter(c => c.risk_level === 'MEDIUM').length || 0,
+    low:      conjunctions?.filter(c => c.risk_level === 'LOW').length || 0,
   };
 
   useEffect(() => {
@@ -197,7 +197,7 @@ export default function Dashboard() {
         </div>
         <div style={{ display: 'flex', height: '7px', borderRadius: '999px', overflow: 'hidden', gap: '2px', backgroundColor: 'rgba(255,255,255,0.03)' }}>
           {['CRITICAL','HIGH','MEDIUM','LOW'].map(r => {
-            const count = conjunctions.filter(c => c.risk_level === r).length;
+            const count = conjunctions?.filter(c => c.risk_level === r)?.length || 0;
             const pct = conjunctions.length ? (count / conjunctions.length) * 100 : 0;
             return (
               <div
@@ -215,7 +215,7 @@ export default function Dashboard() {
         </div>
         <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.625rem', flexWrap: 'wrap' }}>
           {['CRITICAL','HIGH','MEDIUM','LOW'].map(r => {
-            const count = conjunctions.filter(c => c.risk_level === r).length;
+            const count = conjunctions?.filter(c => c.risk_level === r)?.length || 0;
             return (
               <span key={r} style={{ fontSize: '0.6875rem', color: RISK_CFG[r].color, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontFamily: 'JetBrains Mono' }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: RISK_CFG[r].color, display: 'inline-block' }} />

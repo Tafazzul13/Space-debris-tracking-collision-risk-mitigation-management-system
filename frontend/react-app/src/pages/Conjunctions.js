@@ -20,13 +20,13 @@ export default function Conjunctions() {
     15000
   );
 
-  const conjunctions = data || [];
+  const conjunctions = data ? [...data] : [];
 
   useEffect(() => {
     if (liveAlerts.length > 0) refresh();
   }, [liveAlerts.length]); // eslint-disable-line
 
-  const filtered = conjunctions ? (filter === 'ALL' ? conjunctions : conjunctions.filter(c => c.risk_level === filter)) : [];
+  const filtered = conjunctions ? (filter === 'ALL' ? conjunctions : conjunctions?.filter(c => c.risk_level === filter)) : [];
   const counts = { ALL: conjunctions.length, CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
   conjunctions.forEach(c => {
     if (counts[c.risk_level] !== undefined) counts[c.risk_level]++;

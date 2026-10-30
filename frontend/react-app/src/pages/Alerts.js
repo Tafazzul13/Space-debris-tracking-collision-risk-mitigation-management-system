@@ -43,7 +43,7 @@ export default function Alerts() {
     }
   };
 
-  const unread = alerts.filter(a => !a.is_read).length;
+  const unread = alerts?.filter(a => !a.is_read).length || 0;
 
   return (
     <div className="page-container animate-slide-in">
