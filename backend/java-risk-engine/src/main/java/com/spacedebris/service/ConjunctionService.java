@@ -66,6 +66,12 @@ public class ConjunctionService {
                     double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
                     if (dist < SCREENING_WINDOW_KM) {
+                        // Deduplication: skip if a conjunction for this exact pair+TCA already exists
+                        if (conjunctionRepository.existsByPrimaryObjectIdAndSecondaryObjectIdAndTca(
+                                o1.getId(), o2.getId(), ep1.getTimestamp())) {
+                            continue;
+                        }
+
                         Double poc = riskService.calculatePoC(dist, o1, o2);
                         String riskLevel = riskService.classifyRisk(poc);
 

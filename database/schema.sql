@@ -121,6 +121,6 @@ CREATE TABLE audit_log (
 );
 
 INSERT IGNORE INTO users (username, email, password_hash, role) VALUES
-('admin', 'admin@spacedebris.local', '$2a$10$N.zmdr9k7uOCWIQ3nL6GC.sGqC6QJYQJyQJyQJyQJyQJyQJyQJyQ', 'ADMIN'),
-('analyst', 'analyst@spacedebris.local', '$2a$10$N.zmdr9k7uOCWIQ3nL6GC.sGqC6QJYQJyQJyQJyQJyQJyQJyQJyQ', 'ANALYST'),
-('operator', 'operator@spacedebris.local', '$2a$10$N.zmdr9k7uOCWIQ3nL6GC.sGqC6QJYQJyQJyQJyQJyQJyQJyQJyQ', 'OPERATOR');
+('admin', 'admin@spacedebris.local', '$2a$10$sE.Bnil9GjmLt9AGdEAtmOf0zpJT45a1EMWE6vso/QbDe6DWu5auO', 'ADMIN'),
+('analyst', 'analyst@spacedebris.local', '$2a$10$ksReRUICx1FHDo7omE.zg.cm1BOk0Rj1SQhhnETyVihVOdQkkNly.', 'ANALYST'),
+('operator', 'operator@spacedebris.local', '$2a$10$690skZc7u68DPkRvEFOeHOIMWf8eRKG8gR5S6050l/SQXWvfv4aZi', 'OPERATOR');

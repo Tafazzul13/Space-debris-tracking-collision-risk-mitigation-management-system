@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
 @RestController
 @RequestMapping("/api/risk")
 @CrossOrigin(origins = "*")
@@ -32,7 +31,7 @@ public class RiskController {
     private SpaceObjectRepository objectRepository;
 
     @GetMapping("/conjunctions")
-    public List<Conjunction> getConjunctions(@RequestParam(required = String) String riskLevel) {
+    public List<Conjunction> getConjunctions(@RequestParam(required = false) String riskLevel) {
         if (riskLevel != null && !riskLevel.isEmpty()) {
             return conjunctionService.getConjunctionsByRisk(riskLevel);
         }
@@ -53,12 +52,16 @@ public class RiskController {
     }
 
     @GetMapping("/objects/{objectId}/ephemeris")
-    public List<Ephemeris> getEphemeris(@PathVariable Long objectId,
+    public ResponseEntity<?> getEphemeris(@PathVariable Long objectId,
                                         @RequestParam String start,
                                         @RequestParam String end) {
-        LocalDateTime s = LocalDateTime.parse(start);
-        LocalDateTime e = LocalDateTime.parse(end);
-        return propagationService.generateEphemerisForObject(objectId, s, e, 60);
+        try {
+            LocalDateTime s = LocalDateTime.parse(start);
+            LocalDateTime e = LocalDateTime.parse(end);
+            return ResponseEntity.ok(propagationService.generateEphemerisForObject(objectId, s, e, 60));
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("Invalid start/end format. Use ISO-8601 (e.g. 2024-01-01T00:00:00)");
+        }
     }
 
     @GetMapping("/risk-color/{riskLevel}")

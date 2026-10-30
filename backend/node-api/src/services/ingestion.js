@@ -1,6 +1,5 @@
 const axios = require('axios');
-const pool = require('../config/database').getPool();
-const { createAlert } = require('./routes/alerts');
+const { getPool } = require('../config/db');  // fixed: was pointing to wrong path './routes/alerts'
 const cron = require('node-cron');
 
 const SOURCES = [
@@ -23,6 +22,7 @@ function parseTLE(text) {
 
 async function ingestSource(source) {
     try {
+        const pool = await getPool();  // fixed: getPool() is async — must be awaited each time
         const response = await axios.get(source.url, { timeout: 30000 });
         const records = parseTLE(response.data);
         let count = 0;
@@ -79,7 +79,7 @@ function parseTLEEpoch(epochStr) {
 }
 
 function startIngestion(broadcastCallback) {
-    // Initial ingest
+    // Initial ingest on startup
     (async () => {
         for (const source of SOURCES) {
             await ingestSource(source);

@@ -26,10 +26,10 @@ public class Conjunction {
     @Column(name = "tca", nullable = false)
     private LocalDateTime tca;
 
-    @Column(name = "min_distance_km", precision = 12, scale = 4, nullable = false)
+    @Column(name = "min_distance_km")
     private Double minDistanceKm;
 
-    @Column(name = "poc", precision = 15, scale = 10, nullable = false)
+    @Column(name = "poc")
     private Double poc;
 
     @Column(name = "risk_level", length = 20)

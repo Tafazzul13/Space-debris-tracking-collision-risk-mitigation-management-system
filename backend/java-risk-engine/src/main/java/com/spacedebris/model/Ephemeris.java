@@ -22,30 +22,30 @@ public class Ephemeris {
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
 
-    @Column(name = "x_km", precision = 15, scale = 4)
+    @Column(name = "x_km")
     private Double xKm;
 
-    @Column(name = "y_km", precision = 15, scale = 4)
+    @Column(name = "y_km")
     private Double yKm;
 
-    @Column(name = "z_km", precision = 15, scale = 4)
+    @Column(name = "z_km")
     private Double zKm;
 
-    @Column(name = "vx_kms", precision = 10, scale = 4)
+    @Column(name = "vx_kms")
     private Double vxKms;
 
-    @Column(name = "vy_kms", precision = 10, scale = 4)
+    @Column(name = "vy_kms")
     private Double vyKms;
 
-    @Column(name = "vz_kms", precision = 10, scale = 4)
+    @Column(name = "vz_kms")
     private Double vzKms;
 
-    @Column(name = "lat_deg", precision = 10, scale = 6)
+    @Column(name = "lat_deg")
     private Double latDeg;
 
-    @Column(name = "lon_deg", precision = 10, scale = 6)
+    @Column(name = "lon_deg")
     private Double lonDeg;
 
-    @Column(name = "alt_km", precision = 10, scale = 4)
+    @Column(name = "alt_km")
     private Double altKm;
 }

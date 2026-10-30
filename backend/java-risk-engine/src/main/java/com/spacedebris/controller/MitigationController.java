@@ -28,14 +28,18 @@ public class MitigationController {
     private SpaceObjectRepository objectRepository;
 
     @PostMapping("/maneuvers")
-    public ResponseEntity<Maneuver> planManeuver(@RequestParam Long objectId,
+    public ResponseEntity<?> planManeuver(@RequestParam Long objectId,
                                                  @RequestParam(required = false) Long conjunctionId,
                                                  @RequestParam String direction,
                                                  @RequestParam String maneuverTime,
                                                  @RequestParam Double dvMs) {
-        LocalDateTime mt = LocalDateTime.parse(maneuverTime);
-        Maneuver m = maneuverService.planManeuver(objectId, conjunctionId, direction, mt, dvMs);
-        return ResponseEntity.ok(m);
+        try {
+            LocalDateTime mt = LocalDateTime.parse(maneuverTime);
+            Maneuver m = maneuverService.planManeuver(objectId, conjunctionId, direction, mt, dvMs);
+            return ResponseEntity.ok(m);
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("Invalid maneuverTime format. Use ISO-8601 (e.g. 2024-01-01T00:00:00)");
+        }
     }
 
     @GetMapping("/maneuvers")

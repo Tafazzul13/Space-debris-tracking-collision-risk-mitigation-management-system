@@ -165,6 +165,7 @@ public class OrbitPropagationService {
         double y3 = sinR * x2 + cosR * y2;
         double z3 = z2;
 
-        return new double[]{x3 * AE * EARTH_RADIUS_KM, y3 * AE * EARTH_RADIUS_KM, z3 * AE * EARTH_RADIUS_KM};
+        // x3, y3, z3 are already in km (derived from r which is in km); no further scaling needed.
+        return new double[]{x3, y3, z3};
     }
 }

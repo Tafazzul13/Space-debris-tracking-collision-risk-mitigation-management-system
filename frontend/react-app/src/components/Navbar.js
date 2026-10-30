@@ -4,23 +4,53 @@ import { useAuth } from '../context/AuthContext';
 export default function Navbar() {
   const { user, logout } = useAuth();
 
+  const navItems = [
+    { to: '/', label: 'Dashboard', icon: '📊' },
+    { to: '/globe', label: 'Orbital View', icon: '🛰️' },
+    { to: '/conjunctions', label: 'Conjunctions', icon: '📈' },
+    { to: '/mitigation', label: 'Mitigation', icon: '🚀' },
+    { to: '/alerts', label: 'Alerts', icon: '𚀀' },
+  ];
+
   return (
-    <nav className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-700 sticky top-0 z-50">
-      <div className="flex items-center gap-3">
-        <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
-        <span className="font-bold text-xl text-white tracking-tight">SpaceDebris<span className="text-cyan-400">X</span></span>
-      </div>
-      <div className="flex items-center gap-4">
-        <NavLink to="/" className={`px-3 py-2 rounded-md text-sm font-medium transition ${''}`} end>Dashboard</NavLink>
-        <NavLink to="/globe" className="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">3D Globe</NavLink>
-        <NavLink to="/conjunctions" className="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">Conjunctions</NavLink>
-        <NavLink to="/mitigation" className="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">Mitigation</NavLink>
-        <NavLink to="/alerts" className="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">Alerts</NavLink>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-slate-400">{user?.username}</span>
-        <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">{user?.role}</span>
-        <button onClick={logout} className="px-3 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 rounded transition">Sign out</button>
+    <nav className="glass fixed top-0 left-0 right-0 z-50 h-16 border-b border-border/50">
+      <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <span className="text-white text-sm font-bold">S</span>
+          </div>
+          <span className="font-bold text-xl text-white tracking-tight">SpaceDebris<span className="text-cyan-400">X</span></span>
+        </div>
+
+        <div className="hidden md:flex items-center gap-6">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`
+              }
+            >
+              <span className="mr-2">{item.icon}</span> <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex flex-col items-end">
+            <span className="text-sm font-medium text-white">{user?.username}</span>
+            <span className="text-xs px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-cyan-400">
+              {user?.role}
+            </span>
+          </div>
+          <button onClick={logout} className="btn-icon text-slate-400 hover:text-red-400 hover:bg-red-500/10">
+            🚪
+          </button>
+        </div>
       </div>
     </nav>
   );

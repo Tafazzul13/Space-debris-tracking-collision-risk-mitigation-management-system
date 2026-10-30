@@ -3,7 +3,6 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('ws');
 const dotenv = require('dotenv');
-const path = require('path');
 
 dotenv.config();
 
@@ -15,11 +14,13 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/objects', require('./routes/objects'));
-app.use('/api/risk', require('./routes/risk'));
-app.use('/api/mitigation', require('./routes/mitigation'));
-app.use('/api/ingest', require('./routes/ingest'));
+app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api', require('./src/routes/objects'));
+app.use('/api/risk', require('./src/routes/risk'));
+app.use('/api/mitigation', require('./src/routes/mitigation'));
+app.use('/api/ingest', require('./src/routes/ingest'));
+app.use('/api/alerts', require('./src/routes/alerts'));
+app.use('/api', require('./src/routes/health'));
 
 // WebSocket for real-time alerts
 wss.on('connection', (ws) => {

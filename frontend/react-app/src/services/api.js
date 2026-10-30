@@ -20,7 +20,7 @@ export const objectsApi = {
   list: () => API.get('/objects'),
   conjunctions: (riskLevel) => API.get('/conjunctions', { params: { riskLevel } }),
   acknowledge: (id, userId) => API.post(`/conjunctions/${id}/acknowledge`, null, { params: { userId } }),
-  maneuvers: () => API.get('/maneuvers'),
+  maneuvers: () => API.get('/mitigation/maneuvers'),
   alerts: () => API.get('/alerts')
 };
 

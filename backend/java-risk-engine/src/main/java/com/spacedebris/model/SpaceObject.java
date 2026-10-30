@@ -28,7 +28,7 @@ public class SpaceObject {
     @Column(name = "owner_country", length = 100)
     private String ownerCountry;
 
-    @Column(name = "rcs_m2", precision = 10, scale = 4)
+    @Column(name = "rcs_m2")
     private Double rcsM2;
 
     @Column(name = "is_active")

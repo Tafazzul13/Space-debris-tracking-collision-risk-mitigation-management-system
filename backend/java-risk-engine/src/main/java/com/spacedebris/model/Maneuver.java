@@ -23,7 +23,7 @@ public class Maneuver {
     @Column(name = "conjunction_id")
     private Long conjunctionId;
 
-    @Column(name = "dv_ms", precision = 10, scale = 4, nullable = false)
+    @Column(name = "dv_ms")
     private Double dvMs;
 
     @Column(name = "direction", length = 50)

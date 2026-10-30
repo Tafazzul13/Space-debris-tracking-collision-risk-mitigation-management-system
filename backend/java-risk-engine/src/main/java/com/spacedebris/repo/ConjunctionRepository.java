@@ -14,4 +14,7 @@ public interface ConjunctionRepository extends JpaRepository<Conjunction, Long> 
 
     @Query("SELECT c FROM Conjunction c WHERE (c.primaryObjectId = :oid OR c.secondaryObjectId = :oid) ORDER BY c.tca DESC")
     List<Conjunction> findByObjectId(@Param("oid") Long oid);
+
+    // Used for deduplication: check if a conjunction for this exact pair+TCA already exists
+    boolean existsByPrimaryObjectIdAndSecondaryObjectIdAndTca(Long primaryObjectId, Long secondaryObjectId, LocalDateTime tca);
 }
