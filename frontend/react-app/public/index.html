@@ -575,9 +575,27 @@
     const [loading, setLoading] = React.useState(false);
     const [filter, setFilter] = React.useState('ALL');
     const loadData = async () => { setLoading(true); try { const res = await api.get('/conjunctions', { params: filter !== 'ALL' ? { riskLevel: filter } : undefined }); setConjunctions(res.data || []); } catch (e) { window.showToast?.('Failed to load conjunctions', 'critical'); } finally { setLoading(false); } };
-    React.useEffect(() => { loadData(); }, [filter]);
+    React.useEffect(() => { loadData(); window.addEventListener('conjunctionsUpdate', loadData); return () => window.removeEventListener('conjunctionsUpdate', loadData); }, [filter]);
     const acknowledge = async (id) => { try { await api.post('/conjunctions/' + id + '/acknowledge'); setConjunctions(prev => prev.map(c => c.id === id ? { ...c, is_acknowledged: true } : c)); window.showToast?.('Conjunction acknowledged', 'info'); } catch (e) { window.showToast?.('Failed to acknowledge', 'critical'); } };
     const filtered = conjunctions.filter(c => filter === 'ALL' || c.risk_level === filter);
+    const riskBadge = (level) => {
+      const colors = { CRITICAL: 'risk-critical', HIGH: 'risk-high', MEDIUM: 'risk-medium', LOW: 'risk-low' };
+      const cls = colors[level] || 'risk-low';
+      return '<span class="risk-badge ' + cls + '"><span class="risk-dot"></span>' + level + '</span>';
+    };
+    const rowsHtml = filtered.map(c => {
+      return '<tr class="table-row border-b border-white/5">' +
+        '<td class="py-3 text-sm text-slate-300 font-mono">#' + c.id + '</td>' +
+        '<td class="py-3 text-sm text-slate-300"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>Obj #' + c.primary_object_id + '</span></td>' +
+        '<td class="py-3 text-sm text-slate-300"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span>Obj #' + c.secondary_object_id + '</span></td>' +
+        '<td class="py-3 text-sm text-slate-300 font-mono">' + new Date(c.tca).toLocaleString() + '</td>' +
+        '<td class="py-3 text-sm text-slate-300">' + c.min_distance_km?.toFixed(2) + ' km</td>' +
+        '<td class="py-3 text-sm text-slate-300 font-mono">' + (c.poc ? formatPoc(c.poc) : '—') + '</td>' +
+        '<td class="py-3 text-sm">' + riskBadge(c.risk_level) + '</td>' +
+        '<td class="py-3 text-sm"><span class="px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') + '">' + (c.is_acknowledged ? 'Cleared' : 'Active') + '</span></td>' +
+        '<td class="py-3 text-sm">' + (!c.is_acknowledged ? '<button class="btn-cyan px-3 py-1 rounded text-xs" onclick="conjunctionsAcknowledge(' + c.id + ')">Acknowledge</button>' : '') + '</td>' +
+      '</tr>';
+    }).join('');
     return React.createElement('div', { className: 'p-6' },
       React.createElement('div', { className: 'flex items-center justify-between mb-6' },
         React.createElement('div', null,
@@ -595,39 +613,24 @@
           React.createElement('h3', { className: 'text-lg font-bold text-white mb-2' }, 'All Clear'),
           React.createElement('p', { className: 'text-slate-400' }, 'No conjunctions detected.')
         ) : React.createElement('div', { className: 'overflow-x-auto' },
-          React.createElement('table', { className: 'w-full text-left border-collapse' },
-            React.createElement('thead', { className: 'table-header' },
-              React.createElement('tr', null,
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'ID'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Primary'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Secondary'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'TCA'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Distance'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'PoC'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Risk'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Status'),
-                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Action')
-              )
-            ),
-            React.createElement('tbody', null,
-              filtered.map(c => React.createElement('tr', { key: c.id, className: 'table-row border-b border-white/5 hover:bg-white/3' },
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, '#' + c.id),
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-cyan-400' }), 'Obj #' + c.primary_object_id)),
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-purple-400' }), 'Obj #' + c.secondary_object_id)),
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, new Date(c.tca).toLocaleString()),
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, c.min_distance_km?.toFixed(2) + ' km'),
-                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, c.poc ? formatPoc(c.poc) : '—'),
-                React.createElement('td', { className: 'py-3 text-sm' }, riskBadge(c.risk_level)),
-                React.createElement('td', { className: 'py-3 text-sm' }, React.createElement('span', { className: 'px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }, c.is_acknowledged ? 'Cleared' : 'Active')),
-                React.createElement('td', { className: 'py-3 text-sm' },
-                  !c.is_acknowledged && React.createElement('button', { onClick: () => acknowledge(c.id), className: 'btn-cyan px-3 py-1 rounded text-xs' }, 'Acknowledge')
-                )
-              ))
-            )
-          )
+          React.createElement('table', { className: 'w-full text-left border-collapse', innerHTML: '<thead class="table-header"><tr><th class="pb-3 text-xs font-bold text-slate-400 uppercase">ID</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Primary</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Secondary</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">TCA</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Distance</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">PoC</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Risk</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Status</th><th class="pb-3 text-xs font-bold text-slate-400 uppercase">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody>')
         )
+      )
       );
     }
+
+    /* Global acknowledge function for inline onclick handlers in table HTML */
+    window.conjunctionsAcknowledge = async (id) => {
+      try {
+        await api.post('/conjunctions/' + id + '/acknowledge');
+        // Trigger re-fetch by updating a timestamp
+        const evt = new Event('conjunctionsUpdate');
+        window.dispatchEvent(evt);
+        window.showToast?.('Conjunction acknowledged', 'info');
+      } catch (e) {
+        window.showToast?.('Failed to acknowledge', 'critical');
+      }
+    };
 
     /* ========================================================================
        MITIGATION
