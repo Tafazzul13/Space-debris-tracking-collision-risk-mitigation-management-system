@@ -3,14 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>SpaceDebrisX | Collision Risk Management</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?v=2"></script>
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css?v=2"
       rel="stylesheet"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap?v=2"
       rel="stylesheet"
     />
     <style>
@@ -344,7 +347,26 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+  <div class="p-6">
+    <div class="flex items-center justify-center min-h-full bg-black">
+      <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl">
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 text-cyan-400">
+            <i class="fas fa-satellite text-xl"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-white font-orbitron">
+            SpaceDebris<span class="text-cyan-400">X</span>
+          </h1>
+          <p class="text-slate-400 text-sm mt-2">Loading application...</p>
+        </div>
+        <div class="mt-6 flex items-center justify-center">
+          <div class="loader"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/react-router-dom@6/umd/react-router-dom.production.min.js"></script>
