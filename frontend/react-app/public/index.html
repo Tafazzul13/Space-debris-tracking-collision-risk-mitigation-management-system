@@ -7,6 +7,10 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>SpaceDebrisX | Collision Risk Management</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <script src="https://cdn.tailwindcss.com?v=2"></script>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css?v=2"
@@ -46,6 +50,47 @@
       #root {
         min-height: 100vh;
         position: relative;
+      }
+
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #020205;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease;
+      }
+
+      .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(6, 182, 212, 0.3);
+        border-top-color: #06b6d4;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+      }
+
+      .loading-text {
+        color: #64748b;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.875rem;
+        letter-spacing: 0.1em;
+      }
+
+      .loaded .loading-overlay {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      h1, h2, h3, h4, .font-orbitron {
+        font-family: 'Orbitron', monospace;
       }
 
       h1, h2, h3, h4, .font-orbitron {
@@ -348,6 +393,10 @@
   </head>
   <body>
     <div id="root">
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Initializing SpaceDebrisX...</div>
+  </div>
   <div class="p-6">
     <div class="flex items-center justify-center min-h-full bg-black">
       <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl">
@@ -2009,6 +2058,17 @@
 
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
+
+      // Hide loading overlay once app is mounted
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const overlay = document.getElementById('loadingOverlay');
+          if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+          }
+        }, 500);
+      });
     </script>
   </body>
 </html>
