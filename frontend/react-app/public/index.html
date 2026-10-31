@@ -1,482 +1,507 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <title>SpaceDebrisX | Collision Risk Management</title>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" />
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" />
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Orbitron&family=Inter&display=swap');
-
-      :root {
-        --bg-deep: #020205;
-        --bg-panel: rgba(15, 18, 30, 0.85);
-        --accent-cyan: #06b6d4;
-        --accent-purple: #8b5cf6;
-        --accent-red: #ef4444;
-        --accent-amber: #f59e0b;
-        --accent-green: #22c55e;
-        --glass-border: rgba(255, 255, 255, 0.06);
-        --glass-bg: rgba(15, 18, 30, 0.7);
-      }
-
-      * { box-sizing: border-box; }
-
-      body {
-        margin: 0;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: var(--bg-deep);
-        color: #e2e8f0;
-        overflow: hidden;
-      }
-
-      #root { min-height: 100vh; position: relative; }
-
-      .glass-panel {
-        background: var(--glass-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--glass-border);
-        border-radius: 12px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-      }
-
-      .text-gradient {
-        background: linear-gradient(135deg, #fff 0%, #818cf8 50%, #22d3ee 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-
-      .btn-cyan {
-        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        color: #fff;
-        box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
-        transition: all 0.2s;
-      }
-      .btn-cyan:hover { box-shadow: 0 0 30px rgba(6, 182, 212, 0.5); transform: translateY(-1px); }
-      .btn-cyan:active { transform: translateY(0); }
-
-      .btn-glass {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--glass-border);
-        color: #e2e8f0;
-        transition: all 0.2s;
-      }
-      .btn-glass:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(6, 182, 212, 0.4); color: #fff; transform: translateY(-1px); }
-
-      .risk-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .risk-critical { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-      .risk-high { background: rgba(249, 115, 22, 0.15); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.3); }
-      .risk-medium { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.3); }
-      .risk-low { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
-
-      .loader {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(6, 182, 212, 0.2);
-        border-top-color: #06b6d4;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-
-      .loading-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: #020205;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        transition: opacity 0.5s ease;
-      }
-      .loading-spinner {
-        width: 48px; height: 48px;
-        border: 4px solid rgba(6, 182, 212, 0.3);
-        border-top-color: #06b6d4;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 16px;
-      }
-      .loading-text {
-        color: #64748b; font-family: 'Orbitron', monospace;
-        font-size: 0.875rem; letter-spacing: 0.1em;
-      }
-
-      .toast {
-        position: fixed;
-        top: 1.5rem; right: 1.5rem; z-index: 1000;
-        display: flex; flex-direction: column; gap: 0.75rem;
-      }
-      .toast-item {
-        background: rgba(15, 18, 30, 0.9);
-        border: 1px solid var(--glass-border);
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        color: #e2e8f0;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        animation: slideIn 0.3s ease-out;
-        min-width: 300px;
-      }
-      .toast-item.critical { border-left: 4px solid #ef4444; }
-      .toast-item.high { border-left: 4px solid #f97316; }
-      .toast-item.info { border-left: 4px solid #06b6d4; }
-
-      .stat-card {
-        background: rgba(15, 18, 30, 0.6);
-        border: 1px solid var(--glass-border);
-        border-radius: 10px;
-        padding: 1rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s;
-      }
-      .stat-card:hover { border-color: rgba(6, 182, 212, 0.3); transform: translateY(-2px); }
-
-      .table-row:hover { background: rgba(255, 255, 255, 0.03); }
-
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
-      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
-
-      .error-boundary {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 8px;
-        padding: 1.5rem;
-        color: #fca5a5;
-        text-align: center;
-        margin: 1rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root">
-      <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Initializing SpaceDebrisX...</div>
-      </div>
-      <div class="p-6">
-        <div class="flex items-center justify-center min-h-full bg-black">
-          <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl">
-            <div class="text-center">
-              <div class="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 text-cyan-400">
-                <i class="fas fa-satellite text-xl"></i>
-              </div>
-              <h1 class="text-2xl font-bold text-white font-orbitron">SpaceDebris<span class="text-cyan-400">X</span></h1>
-              <p class="text-slate-400 text-sm mt-2">Loading application...</p>
-            </div>
-            <div class="mt-6 flex items-center justify-center">
-              <div class="loader"></div>
-            </div>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>SpaceDebrisX | Collision Risk Management</title>
+<link rel="preconnect" href="https://cdn.tailwindcss.com" />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700&display=swap" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron&family=Inter&display=swap');
+  :root {
+    --bg-deep: #020205;
+    --bg-panel: rgba(15, 18, 30, 0.85);
+    --accent-cyan: #06b6d4;
+    --accent-purple: #8b5cf6;
+    --accent-red: #ef4444;
+    --accent-amber: #f59e0b;
+    --accent-green: #22c55e;
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-bg: rgba(15, 18, 30, 0.7);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-deep);
+    color: #e2e8f0;
+    overflow: hidden;
+  }
+  #root { min-height: 100vh; position: relative; }
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  .text-gradient {
+    background: linear-gradient(135deg, #fff 0%, #818cf8 50%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .btn-cyan {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+    transition: all 0.2s;
+  }
+  .btn-cyan:hover { box-shadow: 0 0 30px rgba(6, 182, 212, 0.5); transform: translateY(-1px); }
+  .btn-cyan:active { transform: translateY(0); }
+  .btn-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: #e2e8f0;
+    transition: all 0.2s;
+  }
+  .btn-glass:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(6, 182, 212, 0.4); color: #fff; transform: translateY(-1px); }
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .risk-critical { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .risk-high { background: rgba(249, 115, 22, 0.15); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.3); }
+  .risk-medium { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.3); }
+  .risk-low { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
+  .loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(6, 182, 212, 0.2);
+    border-top-color: #06b6d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #020205;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+  }
+  .loading-spinner {
+    width: 48px; height: 48px;
+    border: 4px solid rgba(6, 182, 212, 0.3);
+    border-top-color: #06b6d4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+  .loading-text {
+    color: #64748b; font-family: 'Orbitron', monospace;
+    font-size: 0.875rem; letter-spacing: 0.1em;
+  }
+  .toast {
+    position: fixed;
+    top: 1.5rem; right: 1.5rem; z-index: 1000;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .toast-item {
+    background: rgba(15, 18, 30, 0.9);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    color: #e2e8f0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease-out;
+    min-width: 300px;
+  }
+  .toast-item.critical { border-left: 4px solid #ef4444; }
+  .toast-item.high { border-left: 4px solid #f97316; }
+  .toast-item.info { border-left: 4px solid #06b6d4; }
+  .stat-card {
+    background: rgba(15, 18, 30, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .stat-card:hover { border-color: rgba(6, 182, 212, 0.3); transform: translateY(-2px); }
+  .table-row:hover { background: rgba(255, 255, 255, 0.03); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+  .error-boundary {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+    color: #fca5a5;
+    text-align: center;
+    margin: 1rem;
+  }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Initializing SpaceDebrisX...</div>
+  </div>
+  <div class="p-6">
+    <div class="flex items-center justify-center min-h-full bg-black">
+      <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl">
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 text-cyan-400">
+            <i class="fas fa-satellite text-xl"></i>
           </div>
+          <h1 class="text-2xl font-bold text-white font-orbitron">
+            SpaceDebris<span class="text-cyan-400">X</span>
+          </h1>
+          <p class="text-slate-400 text-sm mt-2">Loading application...</p>
+        </div>
+        <div class="mt-6 flex items-center justify-center">
+          <div class="loader"></div>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-router-dom@6/umd/react-router-dom.production.min.js"></script>
-    <script src="https://unpkg.com/axios@1.6.0/dist/axios.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/postprocessing/EffectComposer.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/postprocessing/RenderPass.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/postprocessing/UnrealBloomPass.min.js"></script>
-    <script type="module">
-      /* ========================================================================
-         CONFIGURATION
-         ======================================================================== */
-      const API_BASE = '/api';
-      const DEMO_CREDENTIALS = [
-        { username: 'admin', password: 'admin', role: 'ADMIN' },
-        { username: 'analyst', password: 'analyst', role: 'ANALYST' },
-        { username: 'operator', password: 'operator', role: 'OPERATOR' },
-      ];
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-router-dom@6/umd/react-router-dom.production.min.js"></script>
+<script src="https://unpkg.com/axios@1.6.0/dist/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.min.js"></script>
+<script type="module">
+  /* ========================================================================
+     CONFIGURATION
+     ======================================================================== */
+  const API_BASE = '/api';
+  const DEMO_CREDENTIALS = [
+    { username: 'admin', password: 'admin', role: 'ADMIN' },
+    { username: 'analyst', password: 'analyst', role: 'ANALYST' },
+    { username: 'operator', password: 'operator', role: 'OPERATOR' },
+  ];
 
-      const api = axios.create({ baseURL: API_BASE, headers: { 'Content-Type': 'application/json' } });
-      api.interceptors.request.use((config) => {
-        const token = localStorage.getItem('sd_token');
-        if (token) config.headers.Authorization = 'Bearer ' + token;
-        return config;
+  const api = axios.create({ baseURL: API_BASE, headers: { 'Content-Type': 'application/json' } });
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('sd_token');
+    if (token) config.headers.Authorization = 'Bearer ' + token;
+    return config;
+  });
+
+  const formatPoc = (poc) => { if (!poc) return '—'; return poc.toExponential(2); };
+
+  /* ========================================================================
+     SIMULATION ENGINE
+     ======================================================================== */
+  class SimulationEngine {
+    constructor() {
+      this.objects = [];
+      this.running = false;
+      this.speed = 1;
+      this.lastTime = null;
+      this.callbacks = [];
+    }
+    init(objects) {
+      this.objects = objects.map(o => ({
+        ...o,
+        lon_deg: o.lon_deg || (o.id * 37) % 360,
+        lat_deg: o.lat_deg || 0,
+        alt_km: o.alt_km || 450,
+        velocity: 7.5 + Math.random() * 0.5,
+        inclination: Math.random() * 30,
+      }));
+    }
+    start() {
+      if (this.running) return;
+      this.running = true;
+      this.lastTime = performance.now();
+      this.tick();
+    }
+    stop() { this.running = false; }
+    tick() {
+      if (!this.running) return;
+      const now = performance.now();
+      const dt = (now - this.lastTime) / 1000;
+      this.lastTime = now;
+      this.objects.forEach(o => {
+        o.lon_deg = (o.lon_deg + (o.velocity / (6378 + o.alt_km)) * (180 / Math.PI) * dt * this.speed) % 360;
+        if (o.lon_deg < 0) o.lon_deg += 360;
+        o.lat_deg = Math.sin((now / 1000) * 0.5 + o.inclination) * Math.abs(Math.sin(o.inclination * Math.PI / 180)) * 30;
       });
+      this.callbacks.forEach(cb => cb(this.objects));
+      this.intervalId = requestAnimationFrame(() => this.tick());
+    }
+    setSpeed(s) { this.speed = s; }
+    onUpdate(cb) { this.callbacks.push(cb); }
+    getObjects() { return this.objects; }
+  }
+  const sim = new SimulationEngine();
 
-      const formatPoc = (poc) => { if (!poc) return '—'; return poc.toExponential(2); };
-      const riskBadge = (level) => {
-        const colors = { CRITICAL: 'risk-critical', HIGH: 'risk-high', MEDIUM: 'risk-medium', LOW: 'risk-low' };
-        const cls = colors[level] || 'risk-low';
-        return '<span class="risk-badge ' + cls + '"><span class="risk-dot"></span>' + level + '</span>';
-      };
+  /* ========================================================================
+     UTILITIES
+     ======================================================================== */
+  function riskBadge(level) {
+    const colors = { CRITICAL: 'risk-critical', HIGH: 'risk-high', MEDIUM: 'risk-medium', LOW: 'risk-low' };
+    const cls = colors[level] || 'risk-low';
+    return '<span class="risk-badge ' + cls + '"><span class="risk-dot"></span>' + level + '</span>';
+  }
 
-      /* ========================================================================
-         SIMULATION ENGINE
-         ======================================================================== */
-      class SimulationEngine {
-        constructor() { this.objects = []; this.running = false; this.speed = 1; this.callbacks = []; }
-        init(objects) {
-          this.objects = objects.map(o => ({ ...o, lon_deg: o.lon_deg || (o.id * 37) % 360, lat_deg: o.lat_deg || 0, alt_km: o.alt_km || 450, velocity: 7.5 + Math.random() * 0.5, inclination: Math.random() * 30 }));
-        }
-        start() { if (this.running) return; this.running = true; this.lastTime = performance.now(); this.tick(); }
-        stop() { this.running = false; }
-        tick() { if (!this.running) return; const now = performance.now(); const dt = (now - this.lastTime) / 1000; this.lastTime = now; this.objects.forEach(o => { o.lon_deg = (o.lon_deg + (o.velocity / (6378 + o.alt_km)) * (180 / Math.PI) * dt * this.speed) % 360; if (o.lon_deg < 0) o.lon_deg += 360; o.lat_deg = Math.sin((now / 1000) * 0.5 + o.inclination) * Math.abs(Math.sin(o.inclination * Math.PI / 180)) * 30; }); this.callbacks.forEach(cb => cb(this.objects)); this.intervalId = requestAnimationFrame(() => this.tick()); }
-        setSpeed(s) { this.speed = s; }
-        onUpdate(cb) { this.callbacks.push(cb); }
-        getObjects() { return this.objects; }
-      }
-      const sim = new SimulationEngine();
+  /* ========================================================================
+     REACT COMPONENTS (using React.createElement)
+     ======================================================================== */
+  const { useState, useEffect, useRef, useCallback } = React;
+  const { BrowserRouter, Routes, Route, NavLink, useLocation, useNavigate } = ReactRouterDOM;
 
-      /* ========================================================================
-         REACT COMPONENTS
-         ======================================================================== */
-      const { useState, useEffect, useRef, useCallback } = React;
-      const { BrowserRouter, Routes, Route, NavLink, useLocation, useNavigate } = ReactRouterDOM;
+  const AuthContext = React.createContext(null);
+  function AuthProvider({ children }) {
+    const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('sd_user') || 'null'));
+    const [token, setToken] = useState(localStorage.getItem('sd_token') || null);
+    const [loading, setLoading] = useState(true);
+    useEffect(() => { setLoading(false); }, []);
+    const login = (u, p) => api.post('/auth/login', { username: u, password: p }).then(r => {
+      localStorage.setItem('sd_token', r.data.token);
+      localStorage.setItem('sd_user', JSON.stringify(r.data.user));
+      setToken(r.data.token);
+      setUser(r.data.user);
+      return r.data;
+    });
+    const logout = () => {
+      localStorage.removeItem('sd_token');
+      localStorage.removeItem('sd_user');
+      setToken(null);
+      setUser(null);
+      window.location.href = '/login';
+    };
+    return React.createElement(AuthContext.Provider, { value: { user, token, login, logout, loading } }, children);
+  }
+  function useAuth() { const ctx = React.useContext(AuthContext); if (!ctx) throw new Error('useAuth must be used within AuthProvider'); return ctx; }
 
-      const AuthContext = React.createContext(null);
-      function AuthProvider({ children }) {
-        const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('sd_user') || 'null'));
-        const [token, setToken] = useState(localStorage.getItem('sd_token') || null);
-        const [loading, setLoading] = useState(true);
-        useEffect(() => { setLoading(false); }, []);
-        const login = (u, p) => api.post('/auth/login', { username: u, password: p }).then(r => { localStorage.setItem('sd_token', r.data.token); localStorage.setItem('sd_user', JSON.stringify(r.data.user)); setToken(r.data.token); setUser(r.data.user); return r.data; });
-        const logout = () => { localStorage.removeItem('sd_token'); localStorage.removeItem('sd_user'); setToken(null); setUser(null); window.location.href = '/login'; };
-        return React.createElement(AuthContext.Provider, { value: { user, token, login, logout, loading } }, children);
-      }
-      function useAuth() { const ctx = React.useContext(AuthContext); if (!ctx) throw new Error('useAuth must be used within AuthProvider'); return ctx; }
+  function Navbar() {
+    const { user, logout } = useAuth();
+    return React.createElement('nav', { className: 'fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/10 bg-black/60 backdrop-blur-md' },
+      React.createElement('div', { className: 'max-w-7xl mx-auto px-4 h-full flex items-center justify-between' },
+        React.createElement('div', { className: 'flex items-center gap-3' },
+          React.createElement('div', { className: 'w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/30' },
+            React.createElement('span', { className: 'text-white font-bold text-xl z-10' }, 'SDX')),
+          React.createElement('span', { className: 'font-orbitron font-bold text-xl text-white tracking-tight' }, 'SpaceDebris', React.createElement('span', { className: 'text-cyan-400' }, 'X'))
+        ),
+        React.createElement('div', { className: 'hidden md:flex items-center gap-6' },
+          React.createElement(NavLink, { to: '/', end: true, className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-layer-group mr-2' }), 'Dashboard'),
+          React.createElement(NavLink, { to: '/globe', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-globe mr-2' }), 'Orbital View'),
+          React.createElement(NavLink, { to: '/conjunctions', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-exclamation-triangle mr-2' }), 'Conjunctions'),
+          React.createElement(NavLink, { to: '/mitigation', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-rocket mr-2' }), 'Mitigation'),
+          React.createElement(NavLink, { to: '/alerts', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-bell mr-2' }), 'Alerts')
+        ),
+        React.createElement('div', { className: 'flex items-center gap-3' },
+          React.createElement('div', { className: 'hidden md:flex flex-col items-end' },
+            React.createElement('span', { className: 'text-sm font-medium text-white' }, user ? user.username : ''),
+            React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' }, user ? user.role : '')
+          ),
+          React.createElement('button', { onClick: logout, className: 'text-slate-400 hover:text-red-400 transition-colors' }, React.createElement('i', { className: 'fas fa-sign-out-alt' }))
+        )
+      )
+    );
+  }
 
-      function Navbar() {
-        const { user, logout } = useAuth();
-        return React.createElement('nav', { className: 'fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/10 bg-black/60 backdrop-blur-md' },
-          React.createElement('div', { className: 'max-w-7xl mx-auto px-4 h-full flex items-center justify-between' },
-            React.createElement('div', { className: 'flex items-center gap-3' },
-              React.createElement('div', { className: 'w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/30' }, React.createElement('span', { className: 'text-white font-bold text-xl z-10' }, 'SDX')),
-              React.createElement('span', { className: 'font-orbitron font-bold text-xl text-white tracking-tight' }, 'SpaceDebris', React.createElement('span', { className: 'text-cyan-400' }, 'X'))
-            ),
-            React.createElement('div', { className: 'hidden md:flex items-center gap-6' },
-              React.createElement(NavLink, { to: '/', end: true, className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-layer-group mr-2' }), 'Dashboard'),
-              React.createElement(NavLink, { to: '/globe', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-globe mr-2' }), 'Orbital View'),
-              React.createElement(NavLink, { to: '/conjunctions', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-exclamation-triangle mr-2' }), 'Conjunctions'),
-              React.createElement(NavLink, { to: '/mitigation', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-rocket mr-2' }), 'Mitigation'),
-              React.createElement(NavLink, { to: '/alerts', className: ({ isActive }) => 'px-3 py-2 rounded-lg text-sm font-medium transition-all ' + (isActive ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-lg shadow-cyan-500/10' : 'text-slate-400 hover:text-white hover:bg-white/5') }, React.createElement('i', { className: 'fas fa-bell mr-2' }), 'Alerts')
-            ),
-            React.createElement('div', { className: 'flex items-center gap-3' },
-              React.createElement('div', { className: 'hidden md:flex flex-col items-end' },
-                React.createElement('span', { className: 'text-sm font-medium text-white' }, user ? user.username : ''),
-                React.createElement('span', { className: 'text-xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' }, user ? user.role : '')
-              ),
-              React.createElement('button', { onClick: logout, className: 'text-slate-400 hover:text-red-400 transition-colors' }, React.createElement('i', { className: 'fas fa-sign-out-alt' }))
-            )
-          )
+  function ToastContainer() {
+    const [toasts, setToasts] = React.useState([]);
+    const addToast = (msg, type = 'info') => {
+      const id = Date.now();
+      setToasts(prev => [...prev, { id, msg, type }]);
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+    };
+    window.showToast = addToast;
+    return React.createElement('div', { className: 'toast pointer-events-none' },
+      toasts.map(t => React.createElement('div', { key: t.id, className: 'toast-item ' + t.type },
+        React.createElement('div', { className: 'flex justify-between items-start' },
+          React.createElement('div', null, React.createElement('div', { className: 'text-sm font-semibold text-white' }, t.msg))
+        )
+      ))
+    );
+  }
+  window.showError = (msg) => { window.showToast?.(msg, 'critical'); };
+
+  class ErrorBoundary extends React.Component {
+    state = { hasError: false, error: null };
+    static getDerivedStateFromError(error) { return { hasError: true, error }; }
+    componentDidCatch(error, errorInfo) { console.error('Error boundary caught:', error, errorInfo); window.showError?.(error.message || 'An unexpected error occurred'); }
+    render() {
+      if (this.state.hasError) {
+        return React.createElement('div', { className: 'error-boundary' },
+          React.createElement('h3', { className: 'text-lg font-bold mb-2' }, '⚠️ System Error'),
+          React.createElement('p', { className: 'text-sm mb-3' }, this.state.error?.message || 'An unexpected error occurred'),
+          React.createElement('button', { onClick: () => { this.setState({ hasError: false, error: null }); window.location.reload(); }, className: 'btn-cyan px-4 py-2 text-sm rounded' }, 'Reload Application')
         );
       }
+      return this.props.children;
+    }
+  }
 
-      function ToastContainer() {
-        const [toasts, setToasts] = React.useState([]);
-        const addToast = (msg, type = 'info') => {
-          const id = Date.now();
-          setToasts(prev => [...prev, { id, msg, type }]);
-          setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
-        };
-        window.showToast = addToast;
-        return React.createElement('div', { className: 'toast pointer-events-none' },
-          toasts.map(t => React.createElement('div', { key: t.id, className: 'toast-item ' + t.type },
-            React.createElement('div', { className: 'flex justify-between items-start' },
-              React.createElement('div', null, React.createElement('div', { className: 'text-sm font-semibold text-white' }, t.msg))
-            )
-          )
-        ))
-      );
-      window.showError = (msg) => { window.showToast?.(msg, 'critical'); };
+  /* ========================================================================
+     DASHBOARD
+     ======================================================================== */
+  function Dashboard() {
+    const { user } = useAuth();
+    const [stats, setStats] = useState({ total: 0, critical: 0, high: 0, medium: 0, low: 0 });
+    const [conjunctions, setConjunctions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [simRunning, setSimRunning] = useState(false);
+    const [scanError, setScanError] = useState(null);
+    const objectsRef = React.useRef([]);
 
-      class ErrorBoundary extends React.Component {
-        state = { hasError: false, error: null };
-        static getDerivedStateFromError(error) { return { hasError: true, error }; }
-        componentDidCatch(error, errorInfo) { console.error('Error boundary caught:', error, errorInfo); window.showError?.(error.message || 'An unexpected error occurred'); }
-        render() {
-          if (this.state.hasError) {
-            return React.createElement('div', { className: 'error-boundary' },
-              React.createElement('h3', { className: 'text-lg font-bold mb-2' }, '⚠️ System Error'),
-              React.createElement('p', { className: 'text-sm mb-3' }, this.state.error?.message || 'An unexpected error occurred'),
-              React.createElement('button', { onClick: () => { this.setState({ hasError: false, error: null }); window.location.reload(); }, className: 'btn-cyan px-4 py-2 text-sm rounded' }, 'Reload Application')
-            );
-          }
-          return this.props.children;
-        }
-      }
+    const loadData = useCallback(async () => {
+      try {
+        const [objRes, conjRes] = await Promise.all([api.get('/objects'), api.get('/conjunctions')]);
+        const objs = objRes.data || []; const cons = conjRes.data || [];
+        objectsRef.current = objs; setConjunctions(cons);
+        setStats({ total: objs.length, critical: cons.filter(c => c.risk_level === 'CRITICAL').length, high: cons.filter(c => c.risk_level === 'HIGH').length, medium: cons.filter(c => c.risk_level === 'MEDIUM').length, low: cons.filter(c => c.risk_level === 'LOW').length });
+      } catch (e) { console.error('Load error:', e); } finally { setLoading(false); }
+    }, []);
 
-      /* ========================================================================
-         DASHBOARD
-         ======================================================================== */
-      function Dashboard() {
-        const { user } = useAuth();
-        const [stats, setStats] = useState({ total: 0, critical: 0, high: 0, medium: 0, low: 0 });
-        const [conjunctions, setConjunctions] = useState([]);
-        const [loading, setLoading] = useState(true);
-        const [scanError, setScanError] = useState(null);
-        const objectsRef = React.useRef([]);
+    React.useEffect(() => { loadData(); }, [loadData]);
 
-        const loadData = useCallback(async () => {
-          try {
-            const [objRes, conjRes] = await Promise.all([api.get('/objects'), api.get('/conjunctions')]);
-            const objs = objRes.data || []; const cons = conjRes.data || [];
-            objectsRef.current = objs; setConjunctions(cons);
-            setStats({ total: objs.length, critical: cons.filter(c => c.risk_level === 'CRITICAL').length, high: cons.filter(c => c.risk_level === 'HIGH').length, medium: cons.filter(c => c.risk_level === 'MEDIUM').length, low: cons.filter(c => c.risk_level === 'LOW').length });
-          } catch (e) { console.error('Load error:', e); } finally { setLoading(false); }
-        }, []);
+    const handleScan = async () => { setLoading(true); setScanError(null); try { const res = await api.post('/risk/scan'); setConjunctions(res.data.conjunctions || []); setStats(prev => ({ ...prev, critical: (res.data.conjunctions || []).filter(c => c.risk_level === 'CRITICAL').length, high: (res.data.conjunctions || []).filter(c => c.risk_level === 'HIGH').length, medium: (res.data.conjunctions || []).filter(c => c.risk_level === 'MEDIUM').length, low: (res.data.conjunctions || []).filter(c => c.risk_level === 'LOW').length })); } catch (e) { setScanError(e.response?.data?.error || 'Scan failed'); window.showToast?.('Scan failed: ' + (e.message || 'Unknown error'), 'critical'); } finally { setLoading(false); } };
+    const handleSeed = async () => { setLoading(true); try { await api.post('/ingest/tle'); loadData(); window.showToast?.('Debris data seeded successfully', 'info'); } catch (e) { setScanError('Seed failed: ' + (e.message || 'Unknown error')); window.showToast?.('Seed failed', 'critical'); } finally { setLoading(false); } };
+    const handleSimToggle = () => { setSimRunning(prev => { if (!prev) sim.start(); else sim.stop(); return !prev; }); };
 
-        React.useEffect(() => { loadData(); }, [loadData]);
+    React.useEffect(() => { if (objectsRef.current.length > 0) { sim.init(objectsRef.current); sim.onUpdate(objs => { if (window.globeInstance) window.globeInstance.updateObjects(objs); }); } }, []);
 
-        const handleScan = async () => { setLoading(true); setScanError(null); try { const res = await api.post('/risk/scan'); setConjunctions(res.data.conjunctions || []); setStats(prev => ({ ...prev, critical: (res.data.conjunctions || []).filter(c => c.risk_level === 'CRITICAL').length, high: (res.data.conjunctions || []).filter(c => c.risk_level === 'HIGH').length, medium: (res.data.conjunctions || []).filter(c => c.risk_level === 'MEDIUM').length, low: (res.data.conjunctions || []).filter(c => c.risk_level === 'LOW').length })); } catch (e) { setScanError(e.response?.data?.error || 'Scan failed'); window.showToast?.('Scan failed: ' + (e.message || 'Unknown error'), 'critical'); } finally { setLoading(false); } };
-        const handleSeed = async () => { setLoading(true); try { await api.post('/ingest/tle'); loadData(); window.showToast?.('Debris data seeded successfully', 'info'); } catch (e) { setScanError('Seed failed: ' + (e.message || 'Unknown error')); window.showToast?.('Seed failed', 'critical'); } finally { setLoading(false); } };
-        const handleSimToggle = () => { setSimRunning(prev => { if (!prev) sim.start(); else sim.stop(); return !prev; }); };
-        const [simRunning, setSimRunning] = React.useState(false);
-
-        React.useEffect(() => { if (objectsRef.current.length > 0) { sim.init(objectsRef.current); sim.onUpdate(objs => { if (window.globeInstance) window.globeInstance.updateObjects(objs); }); } }, []);
-
-        return React.createElement('div', { className: 'p-6' },
-          React.createElement('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6' },
+    return React.createElement('div', { className: 'p-6' },
+      React.createElement('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6' },
+        React.createElement('div', null,
+          React.createElement('h1', { className: 'text-2xl font-bold text-white font-orbitron tracking-tight' }, 'Mission Control'),
+          React.createElement('p', { className: 'text-slate-400 text-sm' }, 'Real-time conjunction screening, orbital propagation & delta-v maneuver planning')
+        ),
+        React.createElement('div', { className: 'flex gap-2' },
+          React.createElement('button', { onClick: handleScan, disabled: loading, className: 'btn-cyan px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, loading ? React.createElement('div', { className: 'w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' }) : React.createElement('i', { className: 'fas fa-sync-alt' }), ' Run Conjunction Scan'),
+          React.createElement('button', { onClick: handleSeed, disabled: loading, className: 'btn-glass px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, React.createElement('i', { className: 'fas fa-database' }), ' Seed Debris Data'),
+          React.createElement('button', { onClick: handleSimToggle, className: 'btn-glass px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, React.createElement('i', { className: simRunning ? 'fas fa-stop' : 'fas fa-play' }), ' ', simRunning ? 'Stop Simulation' : 'Start Simulation')
+        )
+      ),
+      scanError && React.createElement('div', { className: 'mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3' },
+        React.createElement('i', { className: 'fas fa-exclamation-triangle' }), React.createElement('span', null, scanError)
+      ),
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6' },
+        React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#06b6d4' } },
+          React.createElement('div', { className: 'flex items-center justify-between' },
             React.createElement('div', null,
-              React.createElement('h1', { className: 'text-2xl font-bold text-white font-orbitron tracking-tight' }, 'Mission Control'),
-              React.createElement('p', { className: 'text-slate-400 text-sm' }, 'Real-time conjunction screening, orbital propagation & delta-v maneuver planning')
+              React.createElement('p', { className: 'metric-label' }, 'Tracked Objects'),
+              React.createElement('div', { className: 'metric-value text-cyan-400' }, stats.total)
             ),
-            React.createElement('div', { className: 'flex gap-2' },
-              React.createElement('button', { onClick: handleScan, disabled: loading, className: 'btn-cyan px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, loading ? React.createElement('div', { className: 'w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' }) : React.createElement('i', { className: 'fas fa-sync-alt' }), ' Run Conjunction Scan'),
-              React.createElement('button', { onClick: handleSeed, disabled: loading, className: 'btn-glass px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, React.createElement('i', { className: 'fas fa-database' }), ' Seed Debris Data'),
-              React.createElement('button', { onClick: handleSimToggle, className: 'btn-glass px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all' }, React.createElement('i', { className: simRunning ? 'fas fa-stop' : 'fas fa-play' }), ' ' + (simRunning ? 'Stop Simulation' : 'Start Simulation'))
-            )
-          ),
-          scanError && React.createElement('div', { className: 'mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3' },
-            React.createElement('i', { className: 'fas fa-exclamation-triangle' }), React.createElement('span', null, scanError)
-          ),
-          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6' },
-            React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#06b6d4' } },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'metric-label' }, 'Tracked Objects'),
-                  React.createElement('div', { className: 'metric-value text-cyan-400' }, stats.total)
-                ),
-                React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400' }, React.createElement('i', { className: 'fas fa-satellite-dish' }))
-              )
+            React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400' }, React.createElement('i', { className: 'fas fa-satellite-dish' }))
+          )
+        ),
+        React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#ef4444' } },
+          React.createElement('div', { className: 'flex items-center justify-between' },
+            React.createElement('div', null,
+              React.createElement('p', { className: 'metric-label' }, 'Critical Risk'),
+              React.createElement('div', { className: 'metric-value text-red-400' }, stats.critical)
             ),
-            React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#ef4444' } },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'metric-label' }, 'Critical Risk'),
-                  React.createElement('div', { className: 'metric-value text-red-400' }, stats.critical)
-                ),
-                React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400' }, React.createElement('i', { className: 'fas fa-triangle-exclamation' }))
-              )
+            React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400' }, React.createElement('i', { className: 'fas fa-triangle-exclamation' }))
+          )
+        ),
+        React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#f97316' } },
+          React.createElement('div', { className: 'flex items-center justify-between' },
+            React.createElement('div', null,
+              React.createElement('p', { className: 'metric-label' }, 'High Risk'),
+              React.createElement('div', { className: 'metric-value text-orange-400' }, stats.high)
             ),
-            React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#f97316' } },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'metric-label' }, 'High Risk'),
-                  React.createElement('div', { className: 'metric-value text-orange-400' }, stats.high)
-                ),
-                React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400' }, React.createElement('i', { className: 'fas fa-exclamation-circle' }))
-              )
+            React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400' }, React.createElement('i', { className: 'fas fa-exclamation-circle' }))
+          )
+        ),
+        React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#eab308' } },
+          React.createElement('div', { className: 'flex items-center justify-between' },
+            React.createElement('div', null,
+              React.createElement('p', { className: 'metric-label' }, 'Medium Risk'),
+              React.createElement('div', { className: 'metric-value text-yellow-400' }, stats.medium)
             ),
-            React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#eab308' } },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'metric-label' }, 'Medium Risk'),
-                  React.createElement('div', { className: 'metric-value text-yellow-400' }, stats.medium)
-                ),
-                React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400' }, React.createElement('i', { className: 'fas fa-clock' }))
-              )
+            React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400' }, React.createElement('i', { className: 'fas fa-clock' }))
+          )
+        ),
+        React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#22c55e' } },
+          React.createElement('div', { className: 'flex items-center justify-between' },
+            React.createElement('div', null,
+              React.createElement('p', { className: 'metric-label' }, 'Low Risk'),
+              React.createElement('div', { className: 'metric-value text-green-400' }, stats.low)
             ),
-            React.createElement('div', { className: 'stat-card', style: { '--accent-color': '#22c55e' } },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'metric-label' }, 'Low Risk'),
-                  React.createElement('div', { className: 'metric-value text-green-400' }, stats.low)
+            React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400' }, React.createElement('i', { className: 'fas fa-shield-halved' }))
+          )
+        )
+      ),
+      React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
+        React.createElement('div', { className: 'lg:col-span-2' },
+          React.createElement('div', { className: 'glass-panel p-5' },
+            React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+              React.createElement('h2', { className: 'text-lg font-semibold text-white font-orbitron' }, React.createElement('i', { className: 'fas fa-layer-group mr-2 text-cyan-400' }), 'Active Conjunctions'),
+              React.createElement('a', { href: '/conjunctions', className: 'text-sm text-cyan-400 hover:text-cyan-300' }, 'View all (' + conjunctions.length + ') →')
+            ),
+            React.createElement('div', { className: 'overflow-x-auto' },
+              React.createElement('table', { className: 'w-full text-left border-collapse' },
+                React.createElement('thead', { className: 'table-header' },
+                  React.createElement('tr', null,
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Pair'),
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'TCA (UTC)'),
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Miss Distance'),
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'PoC'),
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Risk'),
+                    React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Status')
+                  )
                 ),
-                React.createElement('div', { className: 'w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400' }, React.createElement('i', { className: 'fas fa-shield-halved' }))
-              )
-            )
-          ),
-          React.createElement('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
-            React.createElement('div', { className: 'lg:col-span-2' },
-              React.createElement('div', { className: 'glass-panel p-5' },
-                React.createElement('div', { className: 'flex items-center justify-between mb-4' },
-                  React.createElement('h2', { className: 'text-lg font-semibold text-white font-orbitron' }, React.createElement('i', { className: 'fas fa-layer-group mr-2 text-cyan-400' }), 'Active Conjunctions'),
-                  React.createElement('a', { href: '/conjunctions', className: 'text-sm text-cyan-400 hover:text-cyan-300' }, 'View all (' + conjunctions.length + ') →')
-                ),
-                React.createElement('div', { className: 'overflow-x-auto' },
-                  React.createElement('table', { className: 'w-full text-left border-collapse' },
-                    React.createElement('thead', { className: 'table-header' },
-                      React.createElement('tr', null,
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Pair'),
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'TCA (UTC)'),
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Miss Distance'),
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'PoC'),
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Risk'),
-                        React.createElement('th', { className: 'pb-2 text-xs font-bold text-slate-400 uppercase' }, 'Status')
-                      )
-                    ),
-                    React.createElement('tbody', null,
-                      conjunctions.slice(0, 8).map(c =>
-                        React.createElement('tr', { key: c.id, className: 'table-row border-b border-white/5' },
-                          React.createElement('td', { className: 'py-3 text-sm text-slate-300' },
-                            React.createElement('span', { className: 'font-mono text-xs text-slate-500 mr-2' }, '#' + c.primary_object_id),
-                            React.createElement('span', { className: 'text-white font-medium' }, '↔'),
-                            React.createElement('span', { className: 'font-mono text-xs text-slate-500 ml-2' }, '#' + c.secondary_object_id)
-                          ),
-                          React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, new Date(c.tca).toLocaleString()),
-                          React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, c.min_distance_km?.toFixed(2) + ' km'),
-                          React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, c.poc ? formatPoc(c.poc) : '—'),
-                          React.createElement('td', { className: 'py-3 text-sm' }, riskBadge(c.risk_level)),
-                          React.createElement('td', { className: 'py-3 text-sm' },
-                            React.createElement('span', { className: 'px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }, c.is_acknowledged ? 'Cleared' : 'Active')
-                          )
-                        )
+                React.createElement('tbody', null,
+                  conjunctions.slice(0, 8).map(c =>
+                    React.createElement('tr', { key: c.id, className: 'table-row border-b border-white/5' },
+                      React.createElement('td', { className: 'py-3 text-sm text-slate-300' },
+                        React.createElement('span', { className: 'font-mono text-xs text-slate-500 mr-2' }, '#' + c.primary_object_id),
+                        React.createElement('span', { className: 'text-white font-medium' }, '↔'),
+                        React.createElement('span', { className: 'font-mono text-xs text-slate-500 ml-2' }, '#' + c.secondary_object_id)
+                      ),
+                      React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, new Date(c.tca).toLocaleString()),
+                      React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, c.min_distance_km?.toFixed(2) + ' km'),
+                      React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, c.poc ? formatPoc(c.poc) : '—'),
+                      React.createElement('td', { className: 'py-3 text-sm' }, riskBadge(c.risk_level)),
+                      React.createElement('td', { className: 'py-3 text-sm' },
+                        React.createElement('span', { className: 'px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }, c.is_acknowledged ? 'Cleared' : 'Active')
                       )
                     )
                   )
                 )
               )
-            ),
-            React.createElement('div', { className: 'lg:col-span-1 space-y-6' },
-              React.createElement('div', { className: 'glass-panel p-5' },
-                React.createElement('h3', { className: 'text-sm font-bold text-white mb-4 font-orbitron' }, 'Simulation Control'),
-                React.createElement('div', { className: 'space-y-3' },
-                  React.createElement('div', { className: 'flex items-center justify-between' },
-                    React.createElement('span', { className: 'text-sm text-slate-400' }, 'Simulation Engine'),
-                    React.createElement('span', { className: 'text-xs font-bold px-2 py-1 rounded ' + (simRunning ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30') }, simRunning ? 'Running' : 'Stopped')
-                  ),
-                  React.createElement('button', { onClick: handleSimToggle, className: 'w-full btn-glass py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2' },
-                    React.createElement('i', { className: simRunning ? 'fas fa-stop' : 'fas fa-play' }), ' ', simRunning ? 'Pause Simulation' : 'Start Simulation'
-                  ),
-                  React.createElement('div', { className: 'flex items-center gap-2' },
-                    React.createElement('span', { className: 'text-sm text-slate-400' }, 'Speed'),
-                    React.createElement('select', { className: 'bg-black/50 border border-white/10 text-white text-sm rounded px-2 py-1', onChange: e => sim.setSpeed(parseFloat(e.target.value)) },
-                      React.createElement('option', { value: '0.5' }, '0.5x'),
-                      React.createElement('option', { value: '1' }, '1x'),
-                      React.createElement('option', { value: '2' }, '2x'),
-                      React.createElement('option', { value: '5' }, '5x')
-                    )
+            )
+          ),
+          React.createElement('div', { className: 'lg:col-span-1 space-y-6' },
+            React.createElement('div', { className: 'glass-panel p-5' },
+              React.createElement('h3', { className: 'text-sm font-bold text-white mb-4 font-orbitron' }, 'Simulation Control'),
+              React.createElement('div', { className: 'space-y-3' },
+                React.createElement('div', { className: 'flex items-center justify-between' },
+                  React.createElement('span', { className: 'text-sm text-slate-400' }, 'Simulation Engine'),
+                  React.createElement('span', { className: 'text-xs font-bold px-2 py-1 rounded ' + (simRunning ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30') }, simRunning ? 'Running' : 'Stopped')
+                ),
+                React.createElement('button', { onClick: handleSimToggle, className: 'w-full btn-glass py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2' },
+                  React.createElement('i', { className: simRunning ? 'fas fa-stop' : 'fas fa-play' }), ' ', simRunning ? 'Pause Simulation' : 'Start Simulation'
+                ),
+                React.createElement('div', { className: 'flex items-center gap-2' },
+                  React.createElement('span', { className: 'text-sm text-slate-400' }, 'Speed'),
+                  React.createElement('select', { className: 'bg-black/50 border border-white/10 text-white text-sm rounded px-2 py-1', onChange: e => sim.setSpeed(parseFloat(e.target.value)) },
+                    React.createElement('option', { value: '0.5' }, '0.5x'),
+                    React.createElement('option', { value: '1' }, '1x'),
+                    React.createElement('option', { value: '2' }, '2x'),
+                    React.createElement('option', { value: '5' }, '5x')
                   )
                 )
               )
@@ -511,94 +536,93 @@
         )
       )
     );
-    }
+  }
 
-    /* ========================================================================
-       ORBITAL VIEW
-       ======================================================================== */
-    function OrbitalView() {
-      const [conjunctions, setConjunctions] = React.useState([]);
-      const [loading, setLoading] = React.useState(true);
-      const globeRef = React.useRef(null);
+  /* ========================================================================
+     ORBITAL VIEW
+     ======================================================================== */
+  function OrbitalView() {
+    const [conjunctions, setConjunctions] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const globeRef = React.useRef(null);
 
-      React.useEffect(() => {
-        window.globeInstance = globeRef.current;
-        api.get('/objects').then(res => { const objs = res.data || []; if (globeRef.current) globeRef.current.updateObjects(objs); sim.init(objs); sim.start(); });
-        api.get('/conjunctions').then(res => { setConjunctions(res.data || []); setLoading(false); });
-        return () => { window.globeInstance = null; sim.stop(); };
-      }, []);
+    React.useEffect(() => {
+      window.globeInstance = globeRef.current;
+      api.get('/objects').then(res => { const objs = res.data || []; if (globeRef.current) globeRef.current.updateObjects(objs); sim.init(objs); sim.start(); });
+      api.get('/conjunctions').then(res => { setConjunctions(res.data || []); setLoading(false); });
+      return () => { window.globeInstance = null; sim.stop(); };
+    }, []);
 
-      const handleObjectClick = (obj) => { window.showToast?.('Selected: ' + (obj.name || 'Object #' + obj.id), 'info'); };
+    const handleObjectClick = (obj) => { window.showToast?.('Selected: ' + (obj.name || 'Object #' + obj.id), 'info'); };
 
-      return React.createElement('div', { className: 'relative w-full h-full' },
-        React.createElement('div', { id: 'globe-canvas', ref: globeRef, className: 'w-full h-full', onClick: e => { if (globeRef.current) globeRef.current.onClick(e); } }),
-        React.createElement('div', { className: 'absolute top-6 left-6 z-10 glass-panel p-4 rounded-xl' },
-          React.createElement('h2', { className: 'text-lg font-bold text-white font-orbitron mb-2' }, 'Live Orbital View'),
-          React.createElement('p', { className: 'text-xs text-slate-400 mb-3' }, 'Real-time SGP4 propagation • ' + conjunctions.length + ' conjunctions screened'),
-          React.createElement('div', { className: 'flex gap-2' },
-            React.createElement('button', { onClick: () => { if (globeRef.current) globeRef.current.setCameraPosition(new THREE.Vector3(0, 100, 150), new THREE.Vector3(0, 0, 0)); }, className: 'btn-cyan px-3 py-1.5 rounded text-sm' }, 'Reset View')
-          )
+    return React.createElement('div', { className: 'relative w-full h-full' },
+      React.createElement('div', { id: 'globe-canvas', ref: globeRef, className: 'w-full h-full', onClick: e => { if (globeRef.current) globeRef.current.onClick(e); } }),
+      React.createElement('div', { className: 'absolute top-6 left-6 z-10 glass-panel p-4 rounded-xl' },
+        React.createElement('h2', { className: 'text-lg font-bold text-white font-orbitron mb-2' }, 'Live Orbital View'),
+        React.createElement('p', { className: 'text-xs text-slate-400 mb-3' }, 'Real-time SGP4 propagation • ' + conjunctions.length + ' conjunctions screened'),
+        React.createElement('div', { className: 'flex gap-2' },
+          React.createElement('button', { onClick: () => { if (globeRef.current) globeRef.current.setCameraPosition(new THREE.Vector3(0, 100, 150), new THREE.Vector3(0, 0, 0)); }, className: 'btn-cyan px-3 py-1.5 rounded text-sm' }, 'Reset View')
         )
-      );
-    }
+      )
+    );
+  }
 
-    /* ========================================================================
-       CONJUNCTIONS
-       ======================================================================== */
-    function Conjunctions() {
-      const [conjunctions, setConjunctions] = React.useState([]);
-      const [loading, setLoading] = React.useState(false);
-      const [filter, setFilter] = React.useState('ALL');
-      const loadData = async () => { setLoading(true); try { const res = await api.get('/conjunctions', { params: filter !== 'ALL' ? { riskLevel: filter } : undefined }); setConjunctions(res.data || []); } catch (e) { window.showToast?.('Failed to load conjunctions', 'critical'); } finally { setLoading(false); } };
-      React.useEffect(() => { loadData(); }, [filter]);
-      const acknowledge = async (id) => { try { await api.post('/conjunctions/' + id + '/acknowledge'); setConjunctions(prev => prev.map(c => c.id === id ? { ...c, is_acknowledged: true } : c)); window.showToast?.('Conjunction acknowledged', 'info'); } catch (e) { window.showToast?.('Failed to acknowledge', 'critical'); } };
-      const filtered = conjunctions.filter(c => filter === 'ALL' || c.risk_level === filter);
-      return React.createElement('div', { className: 'p-6' },
-        React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-          React.createElement('div', null,
-            React.createElement('h1', { className: 'text-2xl font-bold text-white font-orbitron' }, 'Conjunction Analysis'),
-            React.createElement('p', { className: 'text-slate-400 text-sm' }, 'Pairwise trajectory intersections & collision risk events')
-          ),
-          React.createElement('button', { onClick: () => { setLoading(true); api.post('/risk/scan').then(() => { loadData(); setLoading(false); }); }, className: 'btn-cyan px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2' }, React.createElement('i', { className: 'fas fa-sync-alt' }), ' Rescan')
+  /* ========================================================================
+     CONJUNCTIONS
+     ======================================================================== */
+  function Conjunctions() {
+    const [conjunctions, setConjunctions] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [filter, setFilter] = React.useState('ALL');
+    const loadData = async () => { setLoading(true); try { const res = await api.get('/conjunctions', { params: filter !== 'ALL' ? { riskLevel: filter } : undefined }); setConjunctions(res.data || []); } catch (e) { window.showToast?.('Failed to load conjunctions', 'critical'); } finally { setLoading(false); } };
+    React.useEffect(() => { loadData(); }, [filter]);
+    const acknowledge = async (id) => { try { await api.post('/conjunctions/' + id + '/acknowledge'); setConjunctions(prev => prev.map(c => c.id === id ? { ...c, is_acknowledged: true } : c)); window.showToast?.('Conjunction acknowledged', 'info'); } catch (e) { window.showToast?.('Failed to acknowledge', 'critical'); } };
+    const filtered = conjunctions.filter(c => filter === 'ALL' || c.risk_level === filter);
+    return React.createElement('div', { className: 'p-6' },
+      React.createElement('div', { className: 'flex items-center justify-between mb-6' },
+        React.createElement('div', null,
+          React.createElement('h1', { className: 'text-2xl font-bold text-white font-orbitron' }, 'Conjunction Analysis'),
+          React.createElement('p', { className: 'text-slate-400 text-sm' }, 'Pairwise trajectory intersections & collision risk events')
         ),
-        React.createElement('div', { className: 'glass-panel p-6' },
-          React.createElement('div', { className: 'flex flex-wrap gap-2 mb-6' },
-            ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(f => React.createElement('button', { key: f, onClick: () => setFilter(f), className: 'px-3 py-1.5 rounded text-sm font-medium transition-all ' + (filter === f ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white') }, f))
-          ),
-          loading ? React.createElement('div', { className: 'flex justify-center py-10' }, React.createElement('div', { className: 'loader' })) : filtered.length === 0 ? React.createElement('div', { className: 'flex flex-col items-center justify-center py-12 text-center' },
-            React.createElement('div', { className: 'w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-green-400' }, React.createElement('i', { className: 'fas fa-check-circle text-2xl' })),
-            React.createElement('h3', { className: 'text-lg font-bold text-white mb-2' }, 'All Clear'),
-            React.createElement('p', { className: 'text-slate-400' }, 'No conjunctions detected.')
-          ) : React.createElement('div', { className: 'overflow-x-auto' },
-            React.createElement('table', { className: 'w-full text-left border-collapse' },
-              React.createElement('thead', { className: 'table-header' },
-                React.createElement('tr', null,
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'ID'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Primary'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Secondary'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'TCA'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Distance'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'PoC'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Risk'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Status'),
-                  React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Action')
-                )
-              ),
-              React.createElement('tbody', null,
-                filtered.map(c => React.createElement('tr', { key: c.id, className: 'table-row border-b border-white/5 hover:bg-white/3' },
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, '#' + c.id),
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-cyan-400' }), 'Obj #' + c.primary_object_id)),
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-purple-400' }), 'Obj #' + c.secondary_object_id)),
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, new Date(c.tca).toLocaleString()),
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, c.min_distance_km?.toFixed(2) + ' km'),
-                  React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, c.poc ? formatPoc(c.poc) : '—'),
-                  React.createElement('td', { className: 'py-3 text-sm' }, riskBadge(c.risk_level)),
-                  React.createElement('td', { className: 'py-3 text-sm' }, React.createElement('span', { className: 'px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }, c.is_acknowledged ? 'Cleared' : 'Active')),
-                  React.createElement('td', { className: 'py-3 text-sm' },
-                    !c.is_acknowledged && React.createElement('button', { onClick: () => acknowledge(c.id), className: 'btn-cyan px-3 py-1 rounded text-xs' }, 'Acknowledge')
-                  )
-                ))
+        React.createElement('button', { onClick: () => { setLoading(true); api.post('/risk/scan').then(() => { loadData(); setLoading(false); }); }, className: 'btn-cyan px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2' }, React.createElement('i', { className: 'fas fa-sync-alt' }), ' Rescan')
+      ),
+      React.createElement('div', { className: 'glass-panel p-6' },
+        React.createElement('div', { className: 'flex flex-wrap gap-2 mb-6' },
+          ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(f => React.createElement('button', { key: f, onClick: () => setFilter(f), className: 'px-3 py-1.5 rounded text-sm font-medium transition-all ' + (filter === f ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white') }, f))
+        ),
+        loading ? React.createElement('div', { className: 'flex justify-center py-10' }, React.createElement('div', { className: 'loader' })) : filtered.length === 0 ? React.createElement('div', { className: 'flex flex-col items-center justify-center py-12 text-center' },
+          React.createElement('div', { className: 'w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4 text-green-400' }, React.createElement('i', { className: 'fas fa-check-circle text-2xl' })),
+          React.createElement('h3', { className: 'text-lg font-bold text-white mb-2' }, 'All Clear'),
+          React.createElement('p', { className: 'text-slate-400' }, 'No conjunctions detected.')
+        ) : React.createElement('div', { className: 'overflow-x-auto' },
+          React.createElement('table', { className: 'w-full text-left border-collapse' },
+            React.createElement('thead', { className: 'table-header' },
+              React.createElement('tr', null,
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'ID'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Primary'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Secondary'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'TCA'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Distance'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'PoC'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Risk'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Status'),
+                React.createElement('th', { className: 'pb-3 text-xs font-bold text-slate-400 uppercase' }, 'Action')
               )
+            ),
+            React.createElement('tbody', null,
+              filtered.map(c => React.createElement('tr', { key: c.id, className: 'table-row border-b border-white/5 hover:bg-white/3' },
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, '#' + c.id),
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-cyan-400' }), 'Obj #' + c.primary_object_id)),
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, React.createElement('span', { className: 'flex items-center gap-2' }, React.createElement('span', { className: 'w-2 h-2 rounded-full bg-purple-400' }), 'Obj #' + c.secondary_object_id)),
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, new Date(c.tca).toLocaleString()),
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300' }, c.min_distance_km?.toFixed(2) + ' km'),
+                React.createElement('td', { className: 'py-3 text-sm text-slate-300 font-mono' }, c.poc ? formatPoc(c.poc) : '—'),
+                React.createElement('td', { className: 'py-3 text-sm' }, riskBadge(c.risk_level)),
+                React.createElement('td', { className: 'py-3 text-sm' }, React.createElement('span', { className: 'px-2 py-1 rounded text-xs font-medium ' + (c.is_acknowledged ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20') }, c.is_acknowledged ? 'Cleared' : 'Active')),
+                React.createElement('td', { className: 'py-3 text-sm' },
+                  !c.is_acknowledged && React.createElement('button', { onClick: () => acknowledge(c.id), className: 'btn-cyan px-3 py-1 rounded text-xs' }, 'Acknowledge')
+                )
+              ))
             )
           )
         )
@@ -772,6 +796,6 @@
         if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 500); }
       }, 500);
     });
-    </script>
-  </body>
+  </script>
+</body>
 </html>
